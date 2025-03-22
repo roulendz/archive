@@ -18,7 +18,6 @@ export default class SearchResultsComponent extends BaseComponent {
         
         /** @type {import('../../services/event-service.js').default} */
         this.eventService = eventService;
-
         
         /** @type {HTMLElement|null} */
         this.loadingIndicator = document.getElementById('loadingIndicator');
@@ -32,8 +31,8 @@ export default class SearchResultsComponent extends BaseComponent {
     init() {
         if (this.initialized) return;
         
-        if ( !this.loadingIndicator) {
-        throw new Error('Required search results elements not found');
+        if (!this.loadingIndicator) {
+            throw new Error('Required search results elements not found');
         }
         
         this.setupEventSubscriptions();
@@ -47,17 +46,22 @@ export default class SearchResultsComponent extends BaseComponent {
     setupEventSubscriptions() {
         // Listen for search results
         this.eventService.subscribe('search:resultsReady', (records) => {
-        this.renderRecords(records);
+            this.renderRecords(records);
         });
         
         // Listen for search invalidity
         this.eventService.subscribe('search:invalid', () => {
-        this.renderRecords(null);
+            this.renderRecords(null);
         });
         
         // Listen for loading state changes
         this.eventService.subscribe('ui:loading', (isLoading) => {
-        this.loadingIndicator.classList.toggle('hidden', !isLoading);
+            this.loadingIndicator.classList.toggle('hidden', !isLoading);
+        });
+        
+        // Listen for record updates
+        this.eventService.subscribe('record:updated', (record) => {
+            this.updateRecordCard(record);
         });
     }
     
@@ -71,15 +75,13 @@ export default class SearchResultsComponent extends BaseComponent {
         
         if (records === null) return;
         
-        const hasResults = records.length > 0;
-        
         records.forEach(record => this.createRecordCard(record));
     }
     
     /**
      * Create individual record card
      * @param {import('../../utils/types.js').ArchiveRecord} record 
-     * @returns {void}
+     * @returns {HTMLElement} The created card element
      */
     createRecordCard(record) {
         // Get the template and clone it
@@ -95,6 +97,17 @@ export default class SearchResultsComponent extends BaseComponent {
         // Add data attribute for record ID
         card.dataset.recordId = record.id;
         
+        // Add event listeners for buttons
+        const editButton = card.querySelector('.edit-record');
+        if (editButton) {
+            editButton.addEventListener('click', () => this.handleEditClick(record.id));
+        }
+        
+        const revisionsButton = card.querySelector('.view-revisions');
+        if (revisionsButton) {
+            revisionsButton.addEventListener('click', () => this.handleRevisionsClick(record.id));
+        }
+        
         // Add to container
         this.container.appendChild(card);
         
@@ -102,49 +115,32 @@ export default class SearchResultsComponent extends BaseComponent {
     }
     
     /**
-     * Generate HTML for record card
+     * Update existing record card
      * @param {import('../../utils/types.js').ArchiveRecord} record 
-     * @returns {string} HTML string
      */
-    getCardHTML(record) {
-        return `
-        <div class="flex justify-between items-start mb-4">
-            <h3 class="text-lg font-semibold text-gray-800">${record.title}</h3>
-        </div>
-        <div class="text-sm text-gray-600">
-            ${this.getDateHTML(record)}
-            ${this.getAuthorHTML(record)}
-        </div>
-        `;
+    updateRecordCard(record) {
+        const card = this.container.querySelector(`[data-record-id="${record.id}"]`);
+        if (!card) return;
+        
+        card.querySelector('.record-title').textContent = record.title;
+        card.querySelector('.record-date').textContent = formatArchiveDate(record.date?.toString() || new Date()).formatted;
+        card.querySelector('.record-day').textContent = `(${formatArchiveDate(record.date?.toString() || new Date()).dayName})`;
+        card.querySelector('.record-author').textContent = record.author || 'Unknown';
     }
     
     /**
-     * Generate date section HTML
-     * @param {import('../../utils/types.js').ArchiveRecord} record 
-     * @returns {string} HTML string
+     * Handle edit button click
+     * @param {string} recordId - ID of record to edit
      */
-    getDateHTML(record) {
-        const { formatted, dayName } = formatArchiveDate(record.date?.toString() || new Date());
-        return `
-        <p class="mb-2 flex items-center gap-2">
-            <i class="fas fa-calendar-day has-tooltip" data-tooltip="Date"></i>
-            <span>${formatted}</span>
-            <span class="text-xs text-gray-500">(${dayName})</span>
-        </p>
-        `;
+    handleEditClick(recordId) {
+        this.eventService.publish('ui:openModal', { type: 'edit', recordId });
     }
     
     /**
-     * Generate author section HTML
-     * @param {import('../../utils/types.js').ArchiveRecord} record 
-     * @returns {string} HTML string
+     * Handle revisions button click
+     * @param {string} recordId - ID of record to view revisions
      */
-    getAuthorHTML(record) {
-        return `
-        <p class="flex items-center gap-2">
-            <i class="fas fa-user has-tooltip" data-tooltip="Author"></i>
-            ${record.author || 'Unknown'}
-        </p>
-        `;
+    handleRevisionsClick(recordId) {
+        this.eventService.publish('ui:openModal', { type: 'revisions', recordId });
     }
 }

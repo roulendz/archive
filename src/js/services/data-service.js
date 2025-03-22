@@ -87,4 +87,66 @@ export default class DataService {
         max: Math.max(...years)
         };
     }
+
+    /**
+     * Get a single record by ID
+     * @param {string} recordId - ID of record to retrieve
+     * @returns {import('../utils/types.js').ArchiveRecord|null} Record or null if not found
+     */
+    getRecordById(recordId) {
+        return this.records.find(record => record.id === recordId) || null;
+    }
+
+    /**
+     * Update a record with new data and save revision history
+     * @param {Object} updateData - Update information
+     * @param {string} updateData.recordId - ID of record to update
+     * @param {Object} updateData.updates - Fields to update
+     * @param {Object} updateData.editor - Editor information
+     * @returns {import('../utils/types.js').ArchiveRecord|null} Updated record or null if failed
+     */
+    updateRecord(updateData) {
+        const { recordId, updates, editor } = updateData;
+        
+        // Find record
+        const index = this.records.findIndex(record => record.id === recordId);
+        if (index === -1) return null;
+        
+        // Create a copy of the original record for revision history
+        const originalRecord = { ...this.records[index] };
+        
+        // Update record
+        const updatedRecord = { 
+            ...this.records[index],
+            ...updates,
+            lastUpdated: new Date().toISOString()
+        };
+        
+        // Save to records array
+        this.records[index] = updatedRecord;
+        
+        // Create revision history entry
+        if (!this.revisions) this.revisions = {};
+        if (!this.revisions[recordId]) this.revisions[recordId] = [];
+        
+        this.revisions[recordId].push({
+            timestamp: new Date().toISOString(),
+            editorName: editor.name,
+            editorEmail: editor.email,
+            reason: editor.reason,
+            previous: originalRecord
+        });
+        
+        return updatedRecord;
+    }
+
+    /**
+     * Get revision history for a record
+     * @param {string} recordId - ID of record to get revisions for
+     * @returns {Array<import('../utils/types.js').RecordRevision>} Array of revisions
+     */
+    getRevisions(recordId) {
+        if (!this.revisions || !this.revisions[recordId]) return [];
+        return this.revisions[recordId];
+    }
 }

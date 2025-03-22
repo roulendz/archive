@@ -4,14 +4,26 @@
  */
 export default class YearRangeComponent {
     /**
-     * @param {HTMLElement} container 
-     * @param {HTMLElement} spanElement 
+     * @param {string} containerSelector 
+     * @param {string} spanSelector 
+     * @param {Object} [options]
      */
-    constructor(container, spanElement) {
+    constructor(containerSelector, spanSelector, options) {
         /** @type {HTMLElement} */
-        this.container = container;
+        this.container = document.querySelector(containerSelector);
         /** @type {HTMLElement} */
-        this.spanElement = spanElement;
+        this.spanElement = document.querySelector(spanSelector);
+        
+        // Add event listener for year range updates
+        if (options?.eventService) {
+            options.eventService.subscribe('data:yearRangeLoaded', ({ min, max }) => {
+                this.update(min, max);
+            });
+        }
+
+        if (options?.onReady) {
+            options.onReady();
+        }
     }
 
     /**

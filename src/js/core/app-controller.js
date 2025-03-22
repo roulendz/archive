@@ -6,10 +6,10 @@ import EventService from '../services/event-service.js';
 import SearchFormComponent from '../components/search/search-form.js';
 import SearchResultsComponent from '../components/search/search-results.js';
 import YearRangeComponent from '../components/common/year-range.js';
-import { initializeTooltips } from '../utils/dom-utils.js';
+import ModalComponent from '../components/modals/modal-component.js';
 import SearchGuidanceComponent from '../components/search/search-guidance.js';
+import { initializeTooltips } from '../utils/dom-utils.js';
 import { debug } from '../utils/debugservice-utils.js';
-
 /**
  * Main application controller
  * @class
@@ -49,7 +49,9 @@ export default class AppController {
         
         try {
             // Core UI components
-            this.yearRange = new YearRangeComponent('#yearRange', '#yearSpan');
+            this.yearRange = new YearRangeComponent('#yearRange', '#yearSpan', {
+                eventService: this.eventService,
+            });
             debug.log('Initialized YearRangeComponent');
             
             this.searchForm = new SearchFormComponent('#searchForm', {
@@ -69,6 +71,13 @@ export default class AppController {
             });
             debug.log('Initialized SearchGuidanceComponent');
             
+            // Modal components
+            this.modalComponent = new ModalComponent('#modalsContainer', {
+                eventService: this.eventService,
+                dataService: this.dataService
+            });
+            debug.log('Initialized ModalComponent');
+
             // Initialize tooltips
             initializeTooltips();
             debug.log('Initialized tooltips');
@@ -250,5 +259,29 @@ export default class AppController {
                 }
             }
         });
+
+        // Handle record updates
+        this.eventService.subscribe('record:update', (updateData) => {
+            // Update the record
+            const updatedRecord = this.dataService.updateRecord(updateData);
+            
+            if (updatedRecord) {
+                // Publish event that record was updated
+                this.eventService.publish('record:updated', updatedRecord);
+            }
+        });
+
+        // Handle revisions request
+        this.eventService.subscribe('data:requestRevisions', ({ recordId }) => {
+            // Get revisions
+            const revisions = this.dataService.getRevisions(recordId);
+            
+            // Publish revisions
+            this.eventService.publish('data:revisionsReady', {
+                recordId,
+                revisions
+            });
+        });
+
     }
 }

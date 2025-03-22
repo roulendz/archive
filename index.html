@@ -92,6 +92,23 @@
         #dynamicMessage {
             display: block;
         }
+
+         /* Add to existing animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.8s ease-out forwards;
+            animation-delay: 0.3s; /* Stagger animation after container */
+        }
     </style>
     <link rel="icon" href="data:,">
 </head>
@@ -231,12 +248,12 @@
             <div class="flex justify-between items-start mb-4">
                 <h3 class="text-lg font-semibold text-gray-800 record-title"></h3>
                 <div class="flex space-x-2">
-                    <button class="edit-record text-gray-500 hover:text-indigo-600 transition-colors">
+                    <!-- <button class="edit-record text-gray-500 hover:text-indigo-600 transition-colors">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="view-revisions text-gray-500 hover:text-indigo-600 transition-colors">
                         <i class="fas fa-history"></i>
-                    </button>
+                    </button> -->
                 </div>
             </div>
             <div class="text-sm text-gray-600">
