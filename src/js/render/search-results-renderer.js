@@ -1,3 +1,5 @@
+import { formatArchiveDate } from '../utils/date-utils.js';
+
 /** 
  * Handles search results rendering
  * @class
@@ -63,15 +65,12 @@ export class SearchResultsRenderer {
     }
 
     /**
-     * Generates date HTML section
+     * Generates date HTML section using centralized date formatting
      * @param {Object} record 
      * @returns {string} HTML string
      */
     getDateHTML(record) {
-        const date = new Date(record.date?.toString() || new Date());
-        const formatted = `${date.getFullYear()}-${date.toLocaleString('default', { month: 'short' })}-${date.getDate().toString().padStart(2, '0')}`;
-        const dayName = date.toLocaleDateString('lv-LV', { weekday: 'long' });
-        
+        const { formatted, dayName } = formatArchiveDate(record.date?.toString() || new Date());
         return `
             <p class="mb-2 flex items-center gap-2">
                 <i class="fas fa-calendar-day has-tooltip" data-tooltip="Date"></i>
