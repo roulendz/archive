@@ -1,5 +1,6 @@
 // src/js/services/search-service.js
 
+import { debug } from '../utils/debugservice-utils.js';
 /**
  * Service for search operations and validation
  * @class
@@ -43,25 +44,25 @@ export default class SearchService {
      * @returns {string} Guidance message
      */
     getGuidanceMessage(currentLength, isManualTrigger) {
-        if (currentLength === 0) return '';
-        
-        const remainingAuto = Math.max(this.autoSearchMinChars - currentLength, 0);
-        const remainingManual = Math.max(this.manualSearchMinChars - currentLength, 0);
-        
-        if (isManualTrigger) {
-        return remainingManual > 0 
-            ? `Lūdzu, ievadiet vēl ${remainingManual} rakstzīmes, lai sāktu meklēšanu`
-            : 'Rāda manuālās meklēšanas rezultātus';
-        } 
-        
-        if (remainingAuto > 0) {
-        let message = `Lūdzu, ievadiet vēl ${remainingAuto} rakstzīmes, lai sāktu automātisko meklēšanu`; 
+    if (currentLength === 0) return '';
+    
+    const remainingAuto = Math.max(this.autoSearchMinChars - currentLength, 0);
+    const remainingManual = Math.max(this.manualSearchMinChars - currentLength, 0);
+    
+    let message = '';
+    
+    if (isManualTrigger) {
+        message = remainingManual > 0 
+        ? `Lūdzu, ievadiet vēl ${remainingManual} rakstzīmes, lai sāktu meklēšanu`
+        : 'Rāda manuālās meklēšanas rezultātus';
+    } else if (remainingAuto > 0) {
+        message = `Lūdzu, ievadiet vēl ${remainingAuto} rakstzīmes, lai sāktu automātisko meklēšanu`; 
         if (currentLength >= this.manualSearchMinChars) {
-            message += ' vai noklikšķiniet uz Meklēt!';
+        message += ' vai noklikšķiniet uz Meklēt!';
         }
-        return message;
-        }
-        
-        return 'Rāda automātiskās meklēšanas rezultātus';
+    } else {
+        message = 'Rāda automātiskās meklēšanas rezultātus';
+    }
+    return message;
     }
 }
