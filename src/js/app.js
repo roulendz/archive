@@ -1,14 +1,25 @@
-import ArchiveApp from './archive-app.js';
-import { initializeTooltips } from './utils/tooltips.js';
+// src/js/app.js
+
+import AppController from './core/app-controller.js';
+import { debug } from './utils/debugservice-utils.js';
 
 /**
- * Initializes application when DOM is fully loaded
+ * Initialize application when DOM is fully loaded
  * @listens DOMContentLoaded
  */
 document.addEventListener('DOMContentLoaded', () => {
-    /** @type {ArchiveApp} Application instance */
-    new ArchiveApp();
+    debug.styled`${debug.s.large('Archive Application Starting')}`;
     
-    /** Initialize tooltips for interactive elements */
-    initializeTooltips();
+    try {
+        // Create main application controller
+        window.app = new AppController();
+        
+        // Make debug service available in console for manual debugging
+        window.debug = debug;
+        
+        debug.styled`${debug.s.success('Archive application initialized')}`;
+    } catch (error) {
+        debug.styled`${debug.s.error('Failed to initialize application:')} ${error.message}`;
+        console.error('Failed to initialize application:', error);
+    }
 });

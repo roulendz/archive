@@ -82,10 +82,23 @@ export default class SearchResultsComponent extends BaseComponent {
      * @returns {void}
      */
     createRecordCard(record) {
-        const card = document.createElement('div');
-        card.className = `glassmorphism p-6 pastel-${(record.id % 5) + 1}`;
-        card.innerHTML = this.getCardHTML(record);
+        // Get the template and clone it
+        const template = document.getElementById('recordCardTemplate');
+        const card = template.content.cloneNode(true).querySelector('.record-card');
+        
+        // Fill in the data
+        card.querySelector('.record-title').textContent = record.title;
+        card.querySelector('.record-date').textContent = formatArchiveDate(record.date?.toString() || new Date()).formatted;
+        card.querySelector('.record-day').textContent = `(${formatArchiveDate(record.date?.toString() || new Date()).dayName})`;
+        card.querySelector('.record-author').textContent = record.author || 'Unknown';
+        
+        // Add data attribute for record ID
+        card.dataset.recordId = record.id;
+        
+        // Add to container
         this.container.appendChild(card);
+        
+        return card;
     }
     
     /**
