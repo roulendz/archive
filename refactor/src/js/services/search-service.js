@@ -19,6 +19,16 @@ export default class SearchService {
         /** @type {number} */
         this.manualSearchMinChars = options.manualSearchMinChars || 3;
         
+        /** @type {Object<string, string>} */
+        this.messageTemplates = {
+            autoNotEnough: "Lūdzu, ievadiet vēl {remaining} rakstzīmes, lai sāktu automātisko meklēšanu",
+            autoNotEnoughWithManual: "Lūdzu, ievadiet vēl {remaining} rakstzīmes, lai sāktu automātisko meklēšanu vai noklikšķiniet uz Meklēt!",
+            manualNotEnough: "Lūdzu, ievadiet vēl {remaining} rakstzīmes, lai sāktu meklēšanu",
+            autoResults: "Rāda automātiskās meklēšanas rezultātus",
+            manualResults: "Rāda manuālās meklēšanas rezultātus",
+            empty: ""
+        };
+        
         debug.log('SearchService initialized with options:', {
             autoSearchMinChars: this.autoSearchMinChars,
             manualSearchMinChars: this.manualSearchMinChars
@@ -63,7 +73,7 @@ export default class SearchService {
         
         if (currentLength === 0) {
             debug.styled`Empty input - returning empty message`;
-            return '';
+            return this.messageTemplates.empty;
         }
         
         const remainingAuto = Math.max(this.autoSearchMinChars - currentLength, 0);
@@ -84,29 +94,42 @@ export default class SearchService {
             condition = remainingManual > 0 ? 'manual-not-enough' : 'manual-enough';
             debug.styled`Condition path: ${debug.s.warning(condition)}`;
             
-            message = remainingManual > 0 
-                ? `Lūdzu, ievadiet vēl ${remainingManual} rakstzīmes, lai sāktu meklēšanu`
-                : 'Rāda manuālās meklēšanas rezultātus';
+            if (remainingManual > 0) {
+                message = this.messageTemplates.manualNotEnough.replace('{remaining}', remainingManual);
+            } else {
+                message = this.messageTemplates.manualResults;
+            }
         } else if (remainingAuto > 0) {
             condition = currentLength >= this.manualSearchMinChars ? 'auto-not-enough-but-manual-enough' : 'auto-not-enough';
             debug.styled`Condition path: ${debug.s.info(condition)}`;
             
-            message = `Lūdzu, ievadiet vēl ${remainingAuto} rakstzīmes, lai sāktu automātisko meklēšanu`; 
             if (currentLength >= this.manualSearchMinChars) {
-                message += ' vai noklikšķiniet uz Meklēt!';
+                message = this.messageTemplates.autoNotEnoughWithManual.replace('{remaining}', remainingAuto);
                 debug.styled`Added manual search suggestion to message`;
+            } else {
+                message = this.messageTemplates.autoNotEnough.replace('{remaining}', remainingAuto);
             }
         } else {
             condition = 'auto-enough';
             debug.styled`Condition path: ${debug.s.success(condition)}`;
             
-            message = 'Rāda automātiskās meklēšanas rezultātus';
+            message = this.messageTemplates.autoResults;
         }
         
         // Debug final message
         debug.styled`Final message (${debug.s.info(condition)}): ${debug.s.important(message)}`;
         
         return message;
+    }
+    
+    /**
+     * Update message templates
+     * @param {Object<string, string>} templates - New message templates
+     * @returns {void}
+     */
+    updateMessageTemplates(templates) {
+        Object.assign(this.messageTemplates, templates);
+        debug.log('Updated message templates:', this.messageTemplates);
     }
     
     /**
