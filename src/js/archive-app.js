@@ -1,6 +1,6 @@
 import SearchHandler from './search-handler.js';
 import ModalHandler from './modal-handler.js';
-import RenderEngine from './render-engine.js';
+import RenderEngine from './render/render-engine.js';
 import DataService from './data-service.js';
 
 /**
@@ -72,8 +72,8 @@ export default class ArchiveApp {
                 const safeAuthor = (record.author || '').toLowerCase();
 
                 return safeTitle.includes(searchQuery) ||
-                       safeDate.includes(searchQuery) ||
-                       (includeAuthor && safeAuthor.includes(searchQuery));
+                        safeDate.includes(searchQuery) ||
+                        (includeAuthor && safeAuthor.includes(searchQuery));
             });
         }
 
