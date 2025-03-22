@@ -1,7 +1,6 @@
 // src/js/components/search/search-guidance.js
 
 import BaseComponent from '../base-component.js';
-import { debug } from '../../utils/debugservice-utils.js';
 
 /**
  * Component for displaying search guidance messages
@@ -12,26 +11,25 @@ export default class SearchGuidanceComponent extends BaseComponent {
      * @param {HTMLElement|string} container 
      * @param {Object} services
      * @param {import('../../services/event-service.js').default} services.eventService
+     * @param {import('../../services/search-service.js').default} services.searchService
      */
-    constructor(container, { eventService }) {
-        debug.log('Initializing SearchGuidanceComponent');
-        
+    constructor(container, { eventService, searchService }) {
         super(container);
         
         /** @type {import('../../services/event-service.js').default} */
         this.eventService = eventService;
         
-        /** @type {HTMLElement|null} */
-        this.minCharsMessage = document.getElementById('minCharsMessage');
+        /** @type {import('../../services/search-service.js').default} */
+        this.searchService = searchService;
         
         /** @type {HTMLElement|null} */
-        this.noResultsMessage = document.getElementById('noResultsMessage');
+        this.messageContainer = document.getElementById('messageContainer');
         
         /** @type {HTMLElement|null} */
         this.dynamicMessage = document.getElementById('dynamicMessage');
         
-        /** @type {HTMLElement|null} */
-        this.defaultMessage = document.getElementById('defaultMessage');
+        /** @type {string} */
+        this.currentSearchState = 'idle'; // 'idle', 'typing', 'searching', 'results', 'no-results'
         
         /**
          * Message templates for various states
@@ -39,101 +37,41 @@ export default class SearchGuidanceComponent extends BaseComponent {
          * @private
          */
         this._messages = {
-            defaultNoResults: "Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.",
-            minCharsDefault: "Automātiskai meklēšanai, lūdzu, ievadiet vismaz 5 rakstzīmes, vai 3 rakstzīmes manuālai meklēšanai.",
-            placeholder: "Ievadiet meklēšanas kritērijus, lai atrastu ierakstus"
+            noResults: "Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.",
+            minCharsDefault: "Automātiskai meklēšanai, lūdzu, ievadiet vismaz {untilAutoSearchIsEnabled} rakstzīmes!",
+            placeholder: "Ievadiet meklēšanas kritērijus, lai atrastu ierakstus",
+            searching: "Meklē...",
+            resultsCount: "Atrasti {count} ieraksti",
+            enterToSearch: "Nospiediet Enter vai klikšķiniet uz Meklēt, lai veiktu meklēšanu",
+            typing: "Turpiniet rakstīt, lai meklētu..."
         };
         
-        this._validateElements();
-        this._initializeMessages();
         this.init();
-    }
-    
-    /**
-     * Initialize message content from JavaScript instead of HTML
-     * @private
-     */
-    _initializeMessages() {
-        debug.log('Initializing dynamic messages');
-        
-        // Update minCharsMessage content (no longer hardcoded in HTML)
-        if (this.minCharsMessage) {
-            this.minCharsMessage.textContent = this._messages.minCharsDefault;
-            debug.log(`Set minCharsMessage content: "${this._messages.minCharsDefault}"`);
-        }
-        
-        // Update default message content
-        if (this.defaultMessage) {
-            this.defaultMessage.textContent = this._messages.defaultNoResults;
-            debug.log(`Set defaultMessage content: "${this._messages.defaultNoResults}"`);
-        }
-        
-        // Store default message in data attribute for reference
-        if (this.noResultsMessage) {
-            this.noResultsMessage.dataset.defaultMessage = this._messages.defaultNoResults;
-            debug.log(`Set noResultsMessage data attribute: "${this._messages.defaultNoResults}"`);
-        }
-        
-        // Update placeholder message
-        const placeholder = document.getElementById('recordsPlaceholder');
-        if (placeholder) {
-            placeholder.textContent = this._messages.placeholder;
-            debug.log(`Set placeholder content: "${this._messages.placeholder}"`);
-        }
-    }
-    
-    /**
-     * Validate that required DOM elements exist
-     * @private
-     */
-    _validateElements() {
-        const elements = {
-            minCharsMessage: this.minCharsMessage,
-            noResultsMessage: this.noResultsMessage,
-            dynamicMessage: this.dynamicMessage,
-            defaultMessage: this.defaultMessage
-        };
-        
-        debug.group('Validating SearchGuidance DOM elements', () => {
-            const missingElements = [];
-            
-            Object.entries(elements).forEach(([name, element]) => {
-                const exists = !!element;
-                debug.styled`${name}: ${exists ? debug.s.success('Found') : debug.s.error('Missing')}`;
-                
-                if (!exists) {
-                    missingElements.push(name);
-                }
-            });
-            
-            if (missingElements.length > 0) {
-                debug.styled`${debug.s.error('Missing elements:')} ${missingElements.join(', ')}`;
-            } else {
-                debug.styled`${debug.s.success('All elements found')}`;
-            }
-        });
     }
     
     /**
      * @override
      */
     init() {
-        if (this.initialized) {
-            debug.log('SearchGuidanceComponent already initialized, skipping');
-            return;
-        }
+        if (this.initialized) return;
         
-        if (!this.minCharsMessage || !this.noResultsMessage || 
-            !this.dynamicMessage || !this.defaultMessage) {
-            debug.styled`${debug.s.error('SearchGuidance:')} Required message elements not found`;
+        if (!this.messageContainer || !this.dynamicMessage) {
             console.error('SearchGuidance: Required message elements not found');
             return;
         }
         
-        debug.log('Setting up SearchGuidanceComponent event subscriptions');
+        // Show the message container by default
+        this.messageContainer.classList.remove('hidden');
+        this.dynamicMessage.classList.remove('hidden');
+        
+        // Set default placeholder message
+        const placeholder = document.getElementById('recordsPlaceholder');
+        if (placeholder) {
+            placeholder.textContent = this._messages.placeholder;
+        }
+        
         this.setupEventSubscriptions();
         super.init();
-        debug.styled`${debug.s.success('SearchGuidanceComponent initialized')}`;
     }
     
     /**
@@ -143,124 +81,81 @@ export default class SearchGuidanceComponent extends BaseComponent {
     setupEventSubscriptions() {
         // When search guidance should be updated
         this.eventService.subscribe('ui:updateGuidance', ({ message, currentLength, isManualSearch }) => {
-            debug.group('Guidance update event received', () => {
-                debug.styled`Length: ${debug.s.info(currentLength)}, Manual: ${isManualSearch ? debug.s.warning('Yes') : debug.s.info('No')}`;
-                debug.styled`Message: ${debug.s.important(message || '(empty)')}`;
-                
-                // Hide min chars message when typing has started
-                debug.log(`${currentLength === 0 ? 'Showing' : 'Hiding'} min chars message`);
-                this.showMinCharsMessage(currentLength === 0);
-                
-                // Show dynamic message if we have one
+            // Update internal search state
+            this.currentSearchState = currentLength === 0 ? 'idle' : 'typing';
+            
+            if (currentLength === 0) {
+                // Show initial guidance when no search term
+                this.showMessage(this._messages.placeholder);
+            } else {
+                // Show dynamic message during typing
                 if (message) {
-                    debug.styled`${debug.s.success('Showing dynamic message')}`;
-                    this.showDynamicMessage(message);
+                    this.showMessage(message);
                 } else {
-                    debug.log('No dynamic message to show');
-                    this.hideNoResults();
+                    this.showMessage(this._messages.typing);
                 }
-            });
+            }
         });
         
-        // Handle min chars message visibility
-        this.eventService.subscribe('ui:showMinCharsMessage', (show) => {
-            debug.styled`${show ? debug.s.info('Showing') : debug.s.info('Hiding')} min chars message`;
-            this.showMinCharsMessage(show);
+        // When search begins
+        this.eventService.subscribe('search:started', () => {
+            this.currentSearchState = 'searching';
+            this.showMessage(this._messages.searching);
         });
         
-        // Handle no results message
+        // Handle search results
         this.eventService.subscribe('search:resultsReady', (results) => {
-            debug.group('Search results ready event', () => {
-                debug.styled`Results count: ${debug.s.info(results ? results.length : 0)}`;
+            // Ensure results is an array
+            const safeResults = Array.isArray(results) ? results : [];
+            
+            if (safeResults.length === 0 && this.currentSearchState === 'searching') {
+                // No results found after a search
+                this.currentSearchState = 'no-results';
+                this.showMessage(this._messages.noResults);
+            } else if (safeResults.length > 0) {
+                // Show results count message
+                this.currentSearchState = 'results';
+                const countMessage = this._messages.resultsCount.replace('{count}', safeResults.length);
+                this.showMessage(countMessage);
+            }
+        });
+        
+        // Handle search invalidation with dynamic character counts
+        this.eventService.subscribe('search:invalid', (searchOptions) => {
+            if (!searchOptions || !searchOptions.searchTerm) return;
+            
+            // Get current input length
+            const currentLength = searchOptions.searchTerm.length;
+            
+            // Get remaining character counts
+            const remainingForAuto = this.searchService.autoSearchMinChars - currentLength;
+            const remainingForManual = this.searchService.manualSearchMinChars - currentLength;
+            
+            // Create guidance message with dynamic character counts
+            let guidanceMessage = this._messages.minCharsDefault
+                .replace('{untilAutoSearchIsEnabled}', remainingForAuto)
+                .replace('{untilManualSearchIsEnabled}', remainingForManual);
                 
-                if (results && results.length === 0) {
-                    debug.styled`${debug.s.warning('No results found')} - Showing default no results message`;
-                    // Show default no results message
-                    this.showDefaultNoResults();
-                } else {
-                    debug.log('Results found - Hiding no results message');
-                    this.hideNoResults();
-                }
-            });
+            // If manual search is possible but auto search isn't, add that info
+            if (remainingForManual <= 0 && remainingForAuto > 0) {
+                guidanceMessage += "\n" + this._messages.enterToSearch;
+            }
+            
+            this.showMessage(guidanceMessage);
         });
     }
     
     /**
-     * Show minimum characters message
-     * @param {boolean} show 
-     * @returns {void}
-     */
-    showMinCharsMessage(show) {
-        debug.styled`${debug.s.info('minCharsMessage visibility:')} ${show ? debug.s.success('Visible') : debug.s.error('Hidden')}`;
-        this.minCharsMessage.classList.toggle('hidden', !show);
-        this._logElementState('minCharsMessage', this.minCharsMessage);
-    }
-    
-    /**
-     * Show no results with dynamic message
+     * Show message in the dynamic message element
      * @param {string} message 
      * @returns {void}
      */
-    showDynamicMessage(message) {
-        if (!message) {
-            debug.styled`${debug.s.warning('Cannot show dynamic message:')} Empty message`;
-            return;
-        }
+    showMessage(message) {
+        if (!message) return;
         
-        debug.group('Showing dynamic message', () => {
-            debug.styled`Message content: ${debug.s.important(message)}`;
-            
-            this.dynamicMessage.textContent = message;
-            this.dynamicMessage.classList.remove('hidden');
-            this.defaultMessage.classList.add('hidden');
-            this.noResultsMessage.classList.remove('hidden');
-            
-            this._logElementState('dynamicMessage', this.dynamicMessage);
-            this._logElementState('defaultMessage', this.defaultMessage);
-            this._logElementState('noResultsMessage', this.noResultsMessage);
-        });
-    }
-    
-    /**
-     * Show default no results message
-     * @returns {void}
-     */
-    showDefaultNoResults() {
-        debug.log('Showing default no results message');
-        
-        this.defaultMessage.classList.remove('hidden');
-        this.dynamicMessage.classList.add('hidden');
-        this.noResultsMessage.classList.remove('hidden');
-        
-        this._logElementState('defaultMessage', this.defaultMessage);
-        this._logElementState('dynamicMessage', this.dynamicMessage);
-        this._logElementState('noResultsMessage', this.noResultsMessage);
-    }
-    
-    /**
-     * Hide no results message
-     * @returns {void}
-     */
-    hideNoResults() {
-        debug.log('Hiding no results message');
-        
-        this.noResultsMessage.classList.add('hidden');
-        this._logElementState('noResultsMessage', this.noResultsMessage);
-    }
-    
-    /**
-     * Log the state of an HTML element for debugging
-     * @private
-     * @param {string} name - Element name for logging
-     * @param {HTMLElement} element - Element to inspect
-     */
-    _logElementState(name, element) {
-        const isHidden = element.classList.contains('hidden');
-        const isDisplayNone = window.getComputedStyle(element).display === 'none';
-        const isVisible = !isHidden && !isDisplayNone;
-        
-        debug.styled`Element ${debug.s.info(name)}: ${isVisible ? debug.s.success('Visible') : debug.s.error('Hidden')} (class=${isHidden}, CSS=${isDisplayNone})`;
-        debug.log(`Content: "${element.textContent.trim().substring(0, 50)}${element.textContent.length > 50 ? '...' : ''}"`);
+        this.dynamicMessage.textContent = message;
+        this.messageContainer.classList.remove('hidden');
+        this.dynamicMessage.classList.remove('hidden');
     }
     
     /**
@@ -269,18 +164,10 @@ export default class SearchGuidanceComponent extends BaseComponent {
      * @returns {void}
      */
     updateMessages(messageUpdates) {
-        debug.group('Updating message templates', () => {
-            Object.entries(messageUpdates).forEach(([key, value]) => {
-                if (this._messages.hasOwnProperty(key)) {
-                    debug.styled`Updating message "${debug.s.info(key)}": ${value}`;
-                    this._messages[key] = value;
-                } else {
-                    debug.styled`${debug.s.warning('Unknown message key:')} ${key}`;
-                }
-            });
+        Object.entries(messageUpdates).forEach(([key, value]) => {
+            if (this._messages.hasOwnProperty(key)) {
+                this._messages[key] = value;
+            }
         });
-        
-        // Re-initialize messages to apply updates
-        this._initializeMessages();
     }
 }
