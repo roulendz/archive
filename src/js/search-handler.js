@@ -1,12 +1,17 @@
 /** @typedef {{ renderEngine: { updateSearchGuidance: Function, showMinCharsMessage: Function }, performSearch: Function }} AppType */
 
 /**
- * Controller class for handling search operations and UI interactions
+ * Controller for search operations handling UI interactions and validation
  * @class
+ * @property {AppType} app - Main application instance
+ * @property {HTMLInputElement|null} searchInput - Search text input
+ * @property {HTMLInputElement|null} authorCheckbox - Author filter toggle
+ * @property {HTMLButtonElement|null} searchButton - Manual search trigger
  */
 export default class SearchHandler {
     /**
-     * @param {AppType} app - Main application instance with required dependencies
+     * Creates search controller instance
+     * @param {AppType} app - Parent application containing renderEngine and performSearch
      */
     constructor(app) {
         /** @type {AppType} */
@@ -22,14 +27,21 @@ export default class SearchHandler {
         this.setupEventListeners();
     }
 
-    /** Initializes DOM element references */
+    /** 
+     * Cache DOM references for search interface elements
+     * @throws {Error} If required elements are missing
+     */
     initializeElements() {
         this.searchInput = document.getElementById('searchInput');
         this.authorCheckbox = document.getElementById('authorCheckbox');
         this.searchButton = document.getElementById('searchButton');
     }
 
-    /** Sets up event listeners for search interactions */
+    /**
+     * Handle search trigger events:
+     * - Manual: Button click/Enter key (2+ chars)
+     * - Auto: Input changes (5+ chars)
+     */
     setupEventListeners() {
         // Manual search triggers
         this.searchButton.addEventListener('click', () => this.executeSearch(true));
@@ -42,8 +54,13 @@ export default class SearchHandler {
     }
 
     /**
-     * Main search execution logic
-     * @param {boolean} isManualTrigger - Whether the search was triggered explicitly by user action
+     * Execute search with validation logic
+     * @param {boolean} isManualTrigger - True for explicit user actions
+     * @description Handles:
+     * - Search term sanitization
+     * - UI guidance updates
+     * - Validation thresholds
+     * - Search execution delegation
      */
     executeSearch(isManualTrigger) {
         const searchTerm = this.searchInput.value.trim();
