@@ -45,29 +45,38 @@ export default class AppController {
      */
     initComponents() {
         debug.group('Initializing Components', () => {
-            // Core UI components
-            this.yearRange = new YearRangeComponent('#yearRange', '#yearSpan');
-            debug.log('Initialized YearRangeComponent');
-            
-            this.searchForm = new SearchFormComponent('#searchForm', {
-                eventService: this.eventService,
-                searchService: this.searchService
-            });
-            debug.log('Initialized SearchFormComponent');
-            
-            this.searchResults = new SearchResultsComponent('#recordsContainer', {
-                eventService: this.eventService
-            });
-            debug.log('Initialized SearchResultsComponent');
+            try {
+                // Core UI components
+                this.yearRange = new YearRangeComponent('#yearRange', '#yearSpan');
+                debug.log('Initialized YearRangeComponent');
+                
+                // Verify eventService before passing to components
+                console.log('EventService before SearchFormComponent:', this.eventService);
+                
+                this.searchForm = new SearchFormComponent('#searchForm', {
+                    eventService: this.eventService,
+                    searchService: this.searchService
+                });
+                debug.log('Initialized SearchFormComponent');
+                
+                this.searchResults = new SearchResultsComponent('#recordsContainer', {
+                    eventService: this.eventService
+                });
+                debug.log('Initialized SearchResultsComponent');
 
-            this.searchGuidance = new SearchGuidanceComponent('#searchGuidance', {
-                eventService: this.eventService
-            });
-            debug.log('Initialized SearchGuidanceComponent');
-            
-            // Initialize tooltips
-            initializeTooltips();
-            debug.log('Initialized tooltips');
+                this.searchGuidance = new SearchGuidanceComponent('#searchGuidance', {
+                    eventService: this.eventService,
+                    searchService: this.searchService
+                });
+                debug.log('Initialized SearchGuidanceComponent');
+                
+                // Initialize tooltips
+                initializeTooltips();
+                debug.log('Initialized tooltips');
+            } catch (error) {
+                console.error('Error initializing components:', error);
+                throw error;
+            }
         });
     }
     
@@ -89,12 +98,36 @@ export default class AppController {
         
         // Monitor search requests
         this.eventService.subscribe('search:requested', (data) => {
-            debug.styled`${debug.s.info('Event:')} search:requested - Term: "${data.searchTerm || '(empty)'}", Manual: ${data.isManualSearch ? 'Yes' : 'No'}`;
+            // Check for null or undefined before accessing properties
+            const searchTerm = data && data.searchTerm ? data.searchTerm : '(empty)';
+            const isManual = data && typeof data.isManualSearch === 'boolean' ? data.isManualSearch : false;
+            
+            debug.styled`${debug.s.info('Event:')} search:requested - Term: "${searchTerm}", Manual: ${isManual ? 'Yes' : 'No'}`;
         });
         
-        // Monitor search results
+        // Monitor search start
+        this.eventService.subscribe('search:started', (data) => {
+            // Check for null or undefined before accessing properties
+            const searchTerm = data && data.searchTerm ? data.searchTerm : '(empty)';
+            const isManual = data && typeof data.isManualSearch === 'boolean' ? data.isManualSearch : false;
+            
+            debug.styled`${debug.s.info('Event:')} search:started - Term: "${searchTerm}", Manual: ${isManual ? 'Yes' : 'No'}`;
+        });
+        
+        // Monitor search results - FIXED to safely handle null results
         this.eventService.subscribe('search:resultsReady', (results) => {
-            debug.styled`${debug.s.info('Event:')} search:resultsReady - Results: ${results.length}`;
+            // Safely access the length property
+            const resultsCount = results && Array.isArray(results) ? results.length : 0;
+            debug.styled`${debug.s.info('Event:')} search:resultsReady - Results: ${resultsCount}`;
+        });
+        
+        // Monitor search invalidation
+        this.eventService.subscribe('search:invalid', (data) => {
+            // Check for null or undefined before accessing properties
+            const searchTerm = data && data.searchTerm ? data.searchTerm : '(empty)';
+            const isManual = data && typeof data.isManualSearch === 'boolean' ? data.isManualSearch : false;
+            
+            debug.styled`${debug.s.info('Event:')} search:invalid - Term: "${searchTerm}", Manual: ${isManual ? 'Yes' : 'No'}`;
         });
         
         // Monitor min chars message
@@ -152,8 +185,14 @@ export default class AppController {
     setupEventListeners() {
         debug.log('Setting up event listeners');
         
-        // Handle search requests - FIX: Using proper debug.group syntax
+        // Handle search requests
         this.eventService.subscribe('search:requested', (searchOptions) => {
+            // Handle potential null or undefined searchOptions
+            if (!searchOptions) {
+                debug.styled`${debug.s.error('Invalid search options:')} null or undefined`;
+                return;
+            }
+            
             const { searchTerm, includeAuthor, isManualSearch } = searchOptions;
             
             // Debug search request details
@@ -189,29 +228,36 @@ export default class AppController {
                 });
                 const endTime = performance.now();
                 
+                // Ensure results is an array
+                const safeResults = Array.isArray(results) ? results : [];
+                
                 // Debug search results
                 debug.styled`
                     ${debug.s.success('Search completed')}
-                    Results: ${debug.s.info(results.length)}
+                    Results: ${debug.s.info(safeResults.length)}
                     Time: ${debug.s.info((endTime - startTime).toFixed(2) + 'ms')}
                 `;
                 
-                // Log first few results - FIX: Proper debug.group usage
-                if (results.length > 0) {
+                // Log first few results 
+                if (safeResults.length > 0) {
                     debug.group('First 3 results', () => {
-                        results.slice(0, 3).forEach((result, index) => {
+                        safeResults.slice(0, 3).forEach((result, index) => {
                             debug.log(`Result ${index + 1}:`, result);
                         });
                     });
                 }
                 
-                // Update UI
-                this.eventService.publish('search:resultsReady', results);
+                // Update UI with results - always use the safe array
+                this.eventService.publish('search:resultsReady', safeResults);
             } else {
                 debug.styled`${debug.s.error('Search is invalid')} - Showing guidance`;
                 
-                // Show guidance for invalid search
-                this.eventService.publish('search:invalid', searchOptions);
+                // No need to publish search:invalid here as it's done in SearchFormComponent
+                // Only if there's no search term at all (empty search), clear results
+                if (!searchTerm) {
+                    // Always pass an empty array instead of null
+                    this.eventService.publish('search:resultsReady', []);
+                }
             }
         });
     }
