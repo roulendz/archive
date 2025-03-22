@@ -46,3 +46,22 @@ export function formatArchiveDate(dateString) {
 export function getYearFromDate(dateString) {
     return new Date(dateString).getFullYear();
 }
+
+/**
+ * @typedef {Object} YearRange
+ * @property {number} min
+ * @property {number} max
+ */
+
+/**
+ * Extracts year range from array of records
+ * @param {Array<{date: string}>} records 
+ * @returns {YearRange}
+ */
+export function getYearRange(records) {
+    const years = records.map(item => new Date(item.date).getFullYear());
+    return {
+        min: Math.min(...years),
+        max: Math.max(...years)
+    };
+}
