@@ -36,13 +36,13 @@ export class SearchGuidanceUI {
         let message = '';
         if (isManualTrigger) {
             message = remainingManual > 0 
-                ? `Please enter ${remainingManual} more character${remainingManual !== 1 ? 's' : ''} to search`
+                ? `Lūdzu, ievadiet vēl ${remainingManual} rakstzīmes, lai sāktu automātisko meklēšan${remainingManual !== 1 ? 's' : ''} to search`
                 : 'Showing manual search results';
         } else {
             if (remainingAuto > 0) {
-                message = `Please enter ${remainingAuto} more character${remainingAuto !== 1 ? 's' : ''} for auto-search`;
+                message = `Lūdzu, ievadiet vēl ${remainingAuto} rakstzīmes, lai sāktu${remainingAuto !== 1 ? 's' : ''} automātisko meklēšan`; 
                 if (currentLength >= MANUAL_SEARCH_MIN) {
-                    message += ' or click Search';
+                    message += ' vai noklikšķiniet uz Meklēt!';
                 }
             } else {
                 message = 'Showing automatic search results';
