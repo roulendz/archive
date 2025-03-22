@@ -1,6 +1,7 @@
 import ArchiveApp from './archive-app.js';
+import { initializeTooltips } from './utils/tooltips.js';
 
-// Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     new ArchiveApp();
+    initializeTooltips();
 });

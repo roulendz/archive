@@ -24,14 +24,17 @@ export default class ArchiveApp {
         let filteredRecords = this.records;
         
         if (searchTerm) {
-            filteredRecords = filteredRecords.filter(record => {
-                const matchesTitle = (record.title || '').toLowerCase().includes(searchTerm);
-                const matchesDate = (record.date || '').includes(searchTerm);
-                const matchesAuthor = includeAuthor ? (record.author || '').toLowerCase().includes(searchTerm) : false;
-                return matchesTitle || matchesDate || matchesAuthor;
+            filteredRecords = this.records.filter(record => {
+                const safeTitle = (record.title || '').toLowerCase();
+                const safeDate = (record.date || '').toString();
+                const safeAuthor = (record.author || '').toLowerCase();
+                
+                return safeTitle.includes(searchTerm) ||
+                       safeDate.includes(searchTerm) ||
+                       (includeAuthor && safeAuthor.includes(searchTerm));
             });
         }
-        
-        this.renderEngine.renderRecords(filteredRecords);
+
+        this.renderEngine.renderRecords(filteredRecords.length ? filteredRecords : []);
     }
 }

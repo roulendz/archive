@@ -20,10 +20,16 @@ export default class SearchHandler {
     }
 
     executeSearch(isManualTrigger) {
-        const searchTerm = this.searchInput.value.toLowerCase().trim();
+        const searchTerm = this.searchInput.value.trim().toLowerCase();
         const includeAuthor = this.authorCheckbox.checked;
 
-        // For automatic searches, only search when 5+ characters
+        // Handle empty search for manual triggers
+        if (isManualTrigger && !searchTerm) {
+            this.app.renderEngine.renderRecords([]);
+            return;
+        }
+
+        // Automatic search threshold
         if (!isManualTrigger && searchTerm.length < 5) {
             this.app.renderEngine.renderRecords([]);
             return;
