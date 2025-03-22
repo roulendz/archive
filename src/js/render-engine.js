@@ -1,10 +1,26 @@
+/** 
+ * UI rendering controller for search results and guidance messages
+ * @class
+ * @property {HTMLElement} recordsContainer - Main container for search results
+ * @property {HTMLElement} noResultsMessage - Element for displaying no-results messages
+ * @property {HTMLElement} minCharsMessage - Element for minimum character warnings
+ */
 export default class RenderEngine {
+    /**
+     * Initializes DOM references for UI elements
+     * @throws {ReferenceError} If required DOM elements are missing
+     */
     constructor() {
         this.recordsContainer = document.getElementById('recordsContainer');
         this.noResultsMessage = document.getElementById('noResultsMessage');
         this.minCharsMessage = document.getElementById('minCharsMessage');
     }
 
+    /**
+     * Formats date string into localized display format
+     * @param {string} dateString - ISO 8601 date string
+     * @returns {{formatted: string, dayName: string}} Object containing formatted date parts
+     */
     formatDate(dateString) {
         const date = new Date(dateString);
         const year = date.getFullYear();
@@ -15,11 +31,16 @@ export default class RenderEngine {
     };
 
     /**
-     * Handles search guidance messages based on input state
-     * @param {number} currentLength - Current search input length
-     * @param {boolean} isManualTrigger - Whether search was manually triggered
+     * Updates search interface guidance messages
+     * @param {number} currentLength - Current length of search input
+     * @param {boolean} isManualTrigger - Whether triggered by explicit user action
+     * @description Manages:
+     * - Minimum character warnings
+     * - Search state messaging
+     * - Manual vs automatic trigger differences
      */
     updateSearchGuidance(currentLength, isManualTrigger) {
+        /** @type {number} Search thresholds prevent excessive API calls */
         const AUTO_SEARCH_MIN = 5;
         const MANUAL_SEARCH_MIN = 2;
 
@@ -31,10 +52,13 @@ export default class RenderEngine {
 
         this.showMinCharsMessage(false);
 
-        // Always calculate remaining characters
+        // Calculate remaining characters needed for valid searches
+        /** @type {number} Characters needed for auto-search */
         const remainingAuto = Math.max(AUTO_SEARCH_MIN - currentLength, 0);
+        /** @type {number} Characters needed for manual search */
         const remainingManual = Math.max(MANUAL_SEARCH_MIN - currentLength, 0);
 
+        /** @type {string} Contextual guidance message */
         let message = '';
         if (isManualTrigger) {
             message = remainingManual > 0 
@@ -51,10 +75,19 @@ export default class RenderEngine {
             }
         }
 
-        console.log('RenderEngine.updateSearchGuidance:', message);  // <-- Add this
+        console.log('RenderEngine.updateSearchGuidance:', message);
         this.showNoResults(true, message);
     }
 
+    /**
+     * Renders search results with error handling
+     * @param {Array|null} records - Search results (null preserves existing messages)
+     * @description Handles:
+     * - Clearing previous results
+     * - Null state preservation
+     * - Empty results handling
+     * - Dynamic card generation
+     */
     renderRecords(records) {
         console.log('RenderEngine.renderRecords:', {
             input: records,
@@ -63,22 +96,24 @@ export default class RenderEngine {
         this.recordsContainer.innerHTML = '';
         this.minCharsMessage.classList.add('hidden');
 
+        // Null state preserves current guidance messages
         if (records === null) {
             console.log('RenderEngine - Preserving guidance messages');
             return;
         }
 
-        // Existing results handling
+        /** @type {boolean} Results availability state */
         const hasResults = records.length > 0;
         this.noResultsMessage.classList.toggle('hidden', hasResults);
 
+        // Handle empty results with default message
         if (records.length === 0) {
             console.log('RenderEngine - Showing default no results message');
             const defaultMsg = this.noResultsMessage.dataset.defaultMessage;
             this.showNoResults(true, defaultMsg);
         }
 
-        // Add missing record rendering logic
+        // Generate result cards with dynamic styling
         records.forEach(record => {
             const card = document.createElement('div');
             card.className = 'glassmorphism p-6 pastel-' + ((record.id % 5) + 1);
@@ -102,10 +137,19 @@ export default class RenderEngine {
         });
     }
 
+    /**
+     * Toggles minimum character warning visibility
+     * @param {boolean} show - Visibility state
+     */
     showMinCharsMessage(show) {
         this.minCharsMessage.classList.toggle('hidden', !show);
     }
 
+    /**
+     * Controls display of no-results message
+     * @param {boolean} show - Whether to display the message
+     * @param {string} [customMessage=''] - Context-specific message content
+     */
     showNoResults(show, customMessage = '') {
         const container = this.noResultsMessage;
         const dynamicMsg = container.querySelector('#dynamicMessage');
