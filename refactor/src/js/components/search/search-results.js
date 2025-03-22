@@ -18,9 +18,7 @@ export default class SearchResultsComponent extends BaseComponent {
         
         /** @type {import('../../services/event-service.js').default} */
         this.eventService = eventService;
-        
-        /** @type {HTMLElement|null} */
-        this.noResultsMessage = document.getElementById('noResultsMessage');
+
         
         /** @type {HTMLElement|null} */
         this.loadingIndicator = document.getElementById('loadingIndicator');
@@ -34,7 +32,7 @@ export default class SearchResultsComponent extends BaseComponent {
     init() {
         if (this.initialized) return;
         
-        if (!this.noResultsMessage || !this.loadingIndicator) {
+        if ( !this.loadingIndicator) {
         throw new Error('Required search results elements not found');
         }
         
@@ -74,13 +72,6 @@ export default class SearchResultsComponent extends BaseComponent {
         if (records === null) return;
         
         const hasResults = records.length > 0;
-        this.noResultsMessage.classList.toggle('hidden', hasResults);
-        
-        if (!hasResults) {
-        const defaultMsg = this.noResultsMessage.dataset.defaultMessage;
-        this.noResultsMessage.querySelector('#dynamicMessage').textContent = defaultMsg;
-        return;
-        }
         
         records.forEach(record => this.createRecordCard(record));
     }
