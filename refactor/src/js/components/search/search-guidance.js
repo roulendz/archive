@@ -41,7 +41,7 @@ export default class SearchGuidanceComponent extends BaseComponent {
             minCharsDefault: "Automātiskai meklēšanai, lūdzu, ievadiet vismaz {untilAutoSearchIsEnabled} rakstzīmes!",
             placeholder: "Ievadiet meklēšanas kritērijus, lai atrastu ierakstus",
             searching: "Meklē...",
-            resultsCount: "Atrasti {count} ieraksti",
+            resultsCount: (count) => `Atrasts ${count} ieraksts${count === 1 ? '' : 'i'}`,
             enterToSearch: "Nospiediet Enter vai klikšķiniet uz Meklēt, lai veiktu meklēšanu",
             typing: "Turpiniet rakstīt, lai meklētu..."
         };
@@ -105,17 +105,14 @@ export default class SearchGuidanceComponent extends BaseComponent {
         
         // Handle search results
         this.eventService.subscribe('search:resultsReady', (results) => {
-            // Ensure results is an array
             const safeResults = Array.isArray(results) ? results : [];
             
             if (safeResults.length === 0 && this.currentSearchState === 'searching') {
-                // No results found after a search
                 this.currentSearchState = 'no-results';
                 this.showMessage(this._messages.noResults);
             } else if (safeResults.length > 0) {
-                // Show results count message
                 this.currentSearchState = 'results';
-                const countMessage = this._messages.resultsCount.replace('{count}', safeResults.length);
+                const countMessage = this._messages.resultsCount(safeResults.length);
                 this.showMessage(countMessage);
             }
         });
