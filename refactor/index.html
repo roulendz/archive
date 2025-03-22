@@ -126,28 +126,23 @@
         
         <!-- Search Guidance Messages Component -->
         <div id="searchGuidance" class="mb-8">
-            <!-- Min Characters Message -->
-            <div id="minCharsMessage" class="hidden text-center text-gray-600 my-4">
-                Automātiskai meklēšanai, lūdzu, ievadiet vismaz 5 rakstzīmes, vai 2 rakstzīmes manuālai meklēšanai.
-            </div>
-            
-            <!-- No Results Message -->
-            <div id="noResultsMessage" class="hidden text-center text-gray-600 my-4" data-default-message="Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.">
-                <span id="defaultMessage">Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.</span>
-                <span id="dynamicMessage" class="hidden"></span>
+            <div id="messageContainer" class="text-center text-gray-600 my-4">
+                <span id="dynamicMessage">
+                    <!-- Will be filled by JavaScript -->
+                </span>
             </div>
         </div>
-        
+
         <!-- Loading Indicator Component -->
         <div id="loadingIndicator" class="hidden flex justify-center my-4">
             <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
-        
+
         <!-- Records Container Component -->
         <div id="recordsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Cards will be dynamically inserted here -->
             <div id="recordsPlaceholder" class="col-span-full text-center text-gray-500 my-12">
-                Ievadiet meklēšanas kritērijus, lai atrastu ierakstus
+                <!-- Will be filled by JavaScript -->
             </div>
         </div>
     </div>
