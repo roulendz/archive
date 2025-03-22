@@ -33,8 +33,53 @@ export default class SearchGuidanceComponent extends BaseComponent {
         /** @type {HTMLElement|null} */
         this.defaultMessage = document.getElementById('defaultMessage');
         
+        /**
+         * Message templates for various states
+         * @type {Object<string, string>}
+         * @private
+         */
+        this._messages = {
+            defaultNoResults: "Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.",
+            minCharsDefault: "Automātiskai meklēšanai, lūdzu, ievadiet vismaz 5 rakstzīmes, vai 3 rakstzīmes manuālai meklēšanai.",
+            placeholder: "Ievadiet meklēšanas kritērijus, lai atrastu ierakstus"
+        };
+        
         this._validateElements();
+        this._initializeMessages();
         this.init();
+    }
+    
+    /**
+     * Initialize message content from JavaScript instead of HTML
+     * @private
+     */
+    _initializeMessages() {
+        debug.log('Initializing dynamic messages');
+        
+        // Update minCharsMessage content (no longer hardcoded in HTML)
+        if (this.minCharsMessage) {
+            this.minCharsMessage.textContent = this._messages.minCharsDefault;
+            debug.log(`Set minCharsMessage content: "${this._messages.minCharsDefault}"`);
+        }
+        
+        // Update default message content
+        if (this.defaultMessage) {
+            this.defaultMessage.textContent = this._messages.defaultNoResults;
+            debug.log(`Set defaultMessage content: "${this._messages.defaultNoResults}"`);
+        }
+        
+        // Store default message in data attribute for reference
+        if (this.noResultsMessage) {
+            this.noResultsMessage.dataset.defaultMessage = this._messages.defaultNoResults;
+            debug.log(`Set noResultsMessage data attribute: "${this._messages.defaultNoResults}"`);
+        }
+        
+        // Update placeholder message
+        const placeholder = document.getElementById('recordsPlaceholder');
+        if (placeholder) {
+            placeholder.textContent = this._messages.placeholder;
+            debug.log(`Set placeholder content: "${this._messages.placeholder}"`);
+        }
     }
     
     /**
@@ -216,5 +261,26 @@ export default class SearchGuidanceComponent extends BaseComponent {
         
         debug.styled`Element ${debug.s.info(name)}: ${isVisible ? debug.s.success('Visible') : debug.s.error('Hidden')} (class=${isHidden}, CSS=${isDisplayNone})`;
         debug.log(`Content: "${element.textContent.trim().substring(0, 50)}${element.textContent.length > 50 ? '...' : ''}"`);
+    }
+    
+    /**
+     * Update message templates programmatically
+     * @param {Object<string, string>} messageUpdates
+     * @returns {void}
+     */
+    updateMessages(messageUpdates) {
+        debug.group('Updating message templates', () => {
+            Object.entries(messageUpdates).forEach(([key, value]) => {
+                if (this._messages.hasOwnProperty(key)) {
+                    debug.styled`Updating message "${debug.s.info(key)}": ${value}`;
+                    this._messages[key] = value;
+                } else {
+                    debug.styled`${debug.s.warning('Unknown message key:')} ${key}`;
+                }
+            });
+        });
+        
+        // Re-initialize messages to apply updates
+        this._initializeMessages();
     }
 }

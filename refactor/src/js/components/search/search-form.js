@@ -1,6 +1,7 @@
 // src/js/components/search/search-form.js
 
 import BaseComponent from '../base-component.js';
+import { debug } from '../../utils/debugservice-utils.js';
 
 /**
  * Search form component handling user input
@@ -14,6 +15,7 @@ export default class SearchFormComponent extends BaseComponent {
      * @param {import('../../services/search-service.js').default} services.searchService
      */
     constructor(container, { eventService, searchService }) {
+        debug.log('Initializing SearchFormComponent');
         super(container);
         
         /** @type {import('../../services/event-service.js').default} */
@@ -38,46 +40,67 @@ export default class SearchFormComponent extends BaseComponent {
      * @override
      */
     init() {
-        if (this.initialized) return;
-        
-        // Find elements
-        this.searchInput = document.getElementById('searchInput');
-        this.authorCheckbox = document.getElementById('authorCheckbox');
-        this.searchButton = document.getElementById('searchButton');
-        
-        if (!this.searchInput || !this.authorCheckbox || !this.searchButton) {
-        throw new Error('Required search form elements not found');
+        if (this.initialized) {
+            debug.log('SearchFormComponent already initialized, skipping');
+            return;
         }
         
-        super.init();
+        debug.group('Initializing SearchFormComponent', () => {
+            // Find elements
+            this.searchInput = document.getElementById('searchInput');
+            this.authorCheckbox = document.getElementById('authorCheckbox');
+            this.searchButton = document.getElementById('searchButton');
+            
+            // Debug element discovery
+            debug.styled`Search input: ${this.searchInput ? debug.s.success('Found') : debug.s.error('Missing')}`;
+            debug.styled`Author checkbox: ${this.authorCheckbox ? debug.s.success('Found') : debug.s.error('Missing')}`;
+            debug.styled`Search button: ${this.searchButton ? debug.s.success('Found') : debug.s.error('Missing')}`;
+            
+            if (!this.searchInput || !this.authorCheckbox || !this.searchButton) {
+                const error = 'Required search form elements not found';
+                debug.styled`${debug.s.error('Initialization Error:')} ${error}`;
+                throw new Error(error);
+            }
+            
+            super.init();
+            debug.styled`${debug.s.success('SearchFormComponent successfully initialized')}`;
+        });
     }
     
     /**
      * @override
      */
     bindEvents() {
+        debug.log('Binding SearchFormComponent events');
+        
         // Button click event
         this.searchButton.addEventListener('click', () => {
-        this.executeSearch(true);
+            debug.styled`${debug.s.warning('Search button clicked')} - Executing manual search`;
+            this.executeSearch(true);
         });
         
         // Enter key event
         this.searchInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
-            this.executeSearch(true);
-        }
+            if (e.key === 'Enter') {
+                debug.styled`${debug.s.warning('Enter key pressed')} - Executing manual search`;
+                this.executeSearch(true);
+            }
         });
         
         // Input change event (for auto-search)
         this.searchInput.addEventListener('input', () => {
-        this.executeSearch(false);
+            debug.styled`${debug.s.info('Input changed')} - Executing auto search`;
+            this.executeSearch(false);
         });
         
         // Subscribe to app events
         this.eventService.subscribe('app:ready', () => {
-        this.searchInput.disabled = false;
-        this.searchButton.disabled = false;
+            debug.log('App ready event received - Enabling search controls');
+            this.searchInput.disabled = false;
+            this.searchButton.disabled = false;
         });
+        
+        debug.log('SearchFormComponent events bound');
     }
     
     /**
@@ -90,32 +113,47 @@ export default class SearchFormComponent extends BaseComponent {
         const currentLength = searchTerm.length;
         const includeAuthor = this.authorCheckbox.checked;
         
-        // Update guidance UI
-        const message = this.searchService.getGuidanceMessage(
-        currentLength, 
-        isManualSearch
-        );
-        
-        this.eventService.publish('ui:updateGuidance', {
-        currentLength,
-        isManualSearch,
-        message
-        });
-        
-        // Hide min chars message when typing starts
-        this.eventService.publish('ui:showMinCharsMessage', currentLength === 0);
-        
-        // Check if valid search
-        const isValid = this.searchService.isValidSearch(
-        searchTerm, 
-        isManualSearch
-        );
-        
-        // Dispatch search event
-        this.eventService.publish('search:requested', {
-        searchTerm: isValid ? searchTerm : null,
-        includeAuthor,
-        isManualSearch
+        debug.group(`Executing ${isManualSearch ? 'manual' : 'auto'} search`, () => {
+            debug.styled`Search term: "${debug.s.info(searchTerm)}" (${debug.s.info(currentLength)} chars)`;
+            debug.styled`Include author: ${includeAuthor ? debug.s.success('Yes') : debug.s.info('No')}`;
+            
+            // Get guidance message
+            const message = this.searchService.getGuidanceMessage(
+                currentLength, 
+                isManualSearch
+            );
+            
+            debug.styled`Guidance message: ${debug.s.important(message || '(empty)')}`;
+            
+            // Publish the guidance update
+            debug.log('Publishing ui:updateGuidance event');
+            this.eventService.publish('ui:updateGuidance', {
+                currentLength,
+                isManualSearch,
+                message
+            });
+            
+            // Hide min chars message when typing starts
+            debug.log(`Publishing ui:showMinCharsMessage event with value: ${currentLength === 0}`);
+            this.eventService.publish('ui:showMinCharsMessage', currentLength === 0);
+            
+            // Check if valid search
+            const isValid = this.searchService.isValidSearch(
+                searchTerm, 
+                isManualSearch
+            );
+            
+            debug.styled`Search validation: ${isValid ? debug.s.success('Valid') : debug.s.error('Invalid')}`;
+            
+            // Dispatch search event with validated term
+            debug.log('Publishing search:requested event');
+            debug.styled`Search term after validation: ${isValid ? debug.s.success(searchTerm) : debug.s.error('null')}`;
+            
+            this.eventService.publish('search:requested', {
+                searchTerm: isValid ? searchTerm : null,
+                includeAuthor,
+                isManualSearch
+            });
         });
     }
 }

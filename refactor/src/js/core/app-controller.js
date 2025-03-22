@@ -150,69 +150,69 @@ export default class AppController {
      * @returns {void}
      */
     setupEventListeners() {
-        debug.group('Setting up event listeners', () => {
-            // Handle search requests
-            this.eventService.subscribe('search:requested', (searchOptions) => {
-                const { searchTerm, includeAuthor, isManualSearch } = searchOptions;
+        debug.log('Setting up event listeners');
+        
+        // Handle search requests - FIX: Using proper debug.group syntax
+        this.eventService.subscribe('search:requested', (searchOptions) => {
+            const { searchTerm, includeAuthor, isManualSearch } = searchOptions;
+            
+            // Debug search request details
+            debug.styled`
+                ${debug.s.info('Search Requested:')}
+                Term: ${debug.s.info(searchTerm || '(empty)')}
+                Author: ${debug.s.info(includeAuthor ? 'Yes' : 'No')}
+                Trigger: ${isManualSearch ? debug.s.warning('Manual') : debug.s.info('Auto')}
+            `;
+            
+            // Validate search
+            const isValid = this.searchService.isValidSearch(
+                searchTerm, 
+                isManualSearch
+            );
+            
+            // Check which guidance message would be shown
+            const guidanceMessage = this.searchService.getGuidanceMessage(
+                searchTerm ? searchTerm.trim().length : 0,
+                isManualSearch
+            );
+            
+            debug.styled`Guidance message: ${debug.s.important(guidanceMessage)}`;
+            
+            if (isValid) {
+                debug.styled`${debug.s.success('Search is valid')} - Processing request`;
                 
-                // Debug search request details
+                // Get filtered records
+                const startTime = performance.now();
+                const results = this.dataService.searchRecords({
+                    searchTerm,
+                    includeAuthor
+                });
+                const endTime = performance.now();
+                
+                // Debug search results
                 debug.styled`
-                    ${debug.s.info('Search Requested:')}
-                    Term: ${debug.s.info(searchTerm || '(empty)')}
-                    Author: ${debug.s.info(includeAuthor ? 'Yes' : 'No')}
-                    Trigger: ${isManualSearch ? debug.s.warning('Manual') : debug.s.info('Auto')}
+                    ${debug.s.success('Search completed')}
+                    Results: ${debug.s.info(results.length)}
+                    Time: ${debug.s.info((endTime - startTime).toFixed(2) + 'ms')}
                 `;
                 
-                // Validate search
-                const isValid = this.searchService.isValidSearch(
-                    searchTerm, 
-                    isManualSearch
-                );
-                
-                // Check which guidance message would be shown
-                const guidanceMessage = this.searchService.getGuidanceMessage(
-                    searchTerm ? searchTerm.trim().length : 0,
-                    isManualSearch
-                );
-                
-                debug.styled`Guidance message: ${debug.s.important(guidanceMessage)}`;
-                
-                if (isValid) {
-                    debug.styled`${debug.s.success('Search is valid')} - Processing request`;
-                    
-                    // Get filtered records
-                    const startTime = performance.now();
-                    const results = this.dataService.searchRecords({
-                        searchTerm,
-                        includeAuthor
-                    });
-                    const endTime = performance.now();
-                    
-                    // Debug search results
-                    debug.styled`
-                        ${debug.s.success('Search completed')}
-                        Results: ${debug.s.info(results.length)}
-                        Time: ${debug.s.info((endTime - startTime).toFixed(2) + 'ms')}
-                    `;
-                    
-                    // Log first few results
-                    if (results.length > 0) {
-                        debug.group('First 3 results', true, () => {
-                            results.slice(0, 3).forEach((result, index) => {
-                                debug.log(`Result ${index + 1}:`, result);
-                            });
+                // Log first few results - FIX: Proper debug.group usage
+                if (results.length > 0) {
+                    debug.group('First 3 results', () => {
+                        results.slice(0, 3).forEach((result, index) => {
+                            debug.log(`Result ${index + 1}:`, result);
                         });
-                    }
-                    
-                    // Update UI
-                    this.eventService.publish('search:resultsReady', results);
-                } else {
-                    debug.styled`${debug.s.error('Search is invalid')} - Showing guidance`;
-                    
-                    // Show guidance for invalid search
-                    this.eventService.publish('search:invalid', searchOptions);
+                    });
                 }
-            });
+                
+                // Update UI
+                this.eventService.publish('search:resultsReady', results);
+            } else {
+                debug.styled`${debug.s.error('Search is invalid')} - Showing guidance`;
+                
+                // Show guidance for invalid search
+                this.eventService.publish('search:invalid', searchOptions);
+            }
         });
     }
 }
