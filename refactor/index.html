@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive Records</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for glassmorphism */
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .modal {
+            backdrop-filter: blur(5px);
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .pastel-1 { background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%); }
+        .pastel-2 { background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); }
+        .pastel-3 { background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%); }
+        .pastel-4 { background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%); }
+        .pastel-5 { background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%); }
+        
+        #global-tooltip {
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        
+        .has-tooltip {
+            cursor: help;
+        }
+
+        /* Message display logic */
+        #defaultMessage {
+            display: inline;
+        }
+        
+        .show-dynamic #defaultMessage {
+            display: none;
+        }
+        
+        .show-dynamic #dynamicMessage {
+            display: block;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.8s ease-out forwards;
+            animation-delay: 0.3s; /* Stagger animation after container */
+        }
+        
+        /* Additional component-specific styles */
+        .component-loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .search-highlight {
+            background-color: rgba(255, 215, 0, 0.3);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+    </style>
+    <link rel="icon" href="data:,">
+</head>
+<body class="p-6">
+    <div class="container mx-auto">
+        <!-- Header Component -->
+        <header id="appHeader" class="mb-8">
+            <h1 id="yearRange" class="text-3xl font-bold text-center mb-2 text-indigo-800">
+                GuP Arhīva ieraksti
+                <span id="yearSpan" class="glassmorphism p-1 text-gray-700 font-medium shadow-sm text-indigo-600 opacity-0 animate-fadeIn"></span>
+            </h1>
+            <p id="appDescription" class="text-center text-gray-600">Meklējiet un pārlūkojiet arhīva ierakstus</p>
+        </header>
+        
+        <!-- Search Form Component -->
+        <div id="searchForm" class="glassmorphism p-6 mb-6">
+            <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                <div class="flex-grow">
+                    <label for="searchInput" class="block text-sm font-medium text-gray-700 mb-1">Meklēšana</label>
+                    <input type="text" id="searchInput" placeholder="Meklēt arhīvā pēc nosaukuma vai datuma..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-center justify-center md:justify-start h-full pt-1 md:pt-0">
+                    <input type="checkbox" id="authorCheckbox" class="mr-2 h-5 w-5 text-indigo-600 rounded">
+                    <label for="authorCheckbox" class="text-sm font-medium text-gray-700">Meklēt arī pēc autora</label> 
+                </div>
+                <button id="searchButton" class="w-full md:w-auto px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-search mr-2"></i>Meklēt
+                </button>
+            </div>
+        </div>
+        
+        <!-- Search Guidance Messages Component -->
+        <div id="searchGuidance" class="mb-8">
+            <!-- Min Characters Message -->
+            <div id="minCharsMessage" class="hidden text-center text-gray-600 my-4">
+                Automātiskai meklēšanai, lūdzu, ievadiet vismaz 5 rakstzīmes, vai 2 rakstzīmes manuālai meklēšanai.
+            </div>
+            
+            <!-- No Results Message -->
+            <div id="noResultsMessage" class="hidden text-center text-gray-600 my-4" data-default-message="Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.">
+                <span id="defaultMessage">Diemžēl nekas netika atrasts atbilstoši jūsu meklējumam.</span>
+                <span id="dynamicMessage" class="hidden"></span>
+            </div>
+        </div>
+        
+        <!-- Loading Indicator Component -->
+        <div id="loadingIndicator" class="hidden flex justify-center my-4">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+        
+        <!-- Records Container Component -->
+        <div id="recordsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Cards will be dynamically inserted here -->
+            <div id="recordsPlaceholder" class="col-span-full text-center text-gray-500 my-12">
+                Ievadiet meklēšanas kritērijus, lai atrastu ierakstus
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals Container -->
+    <div id="modalsContainer">
+        <!-- Edit Modal Component -->
+        <div id="editModal" class="modal fixed inset-0 hidden flex items-center justify-center z-50">
+            <div class="glassmorphism w-full max-w-lg p-6 mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Rediģēt ierakstu</h2>
+                    <button class="close-modal text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="editForm" class="space-y-4">
+                    <input type="hidden" id="editRecordId">
+                    
+                    <div>
+                        <label for="editDate" class="block text-sm font-medium text-gray-700 mb-1">Datums</label>
+                        <input type="date" id="editDate" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label for="editTitle" class="block text-sm font-medium text-gray-700 mb-1">Nosaukums</label>
+                        <input type="text" id="editTitle" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label for="editAuthor" class="block text-sm font-medium text-gray-700 mb-1">Autors</label>
+                        <input type="text" id="editAuthor" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div class="border-t border-gray-200 pt-4">
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">Atjauninājuma informācija</h3>
+                        
+                        <div>
+                            <label for="editorName" class="block text-sm font-medium text-gray-700 mb-1">Jūsu vārds</label>
+                            <input type="text" id="editorName" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label for="editorEmail" class="block text-sm font-medium text-gray-700 mb-1">Jūsu e-pasts</label>
+                            <input type="email" id="editorEmail" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label for="updateReason" class="block text-sm font-medium text-gray-700 mb-1">Labojuma iemesls</label>
+                            <textarea id="updateReason" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" class="close-modal px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors">
+                            Atcelt
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                            Saglabāt izmaiņas
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Revisions Modal Component -->
+        <div id="revisionsModal" class="modal fixed inset-0 hidden flex items-center justify-center z-50">
+            <div class="glassmorphism w-full max-w-lg p-6 mx-4 max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Versiju vēsture</h2>
+                    <button class="close-modal text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div id="revisionsContainer" class="space-y-4">
+                    <!-- Revision cards will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Templates -->
+    <template id="recordCardTemplate">
+        <div class="glassmorphism p-6 record-card">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-semibold text-gray-800 record-title"></h3>
+                <div class="flex space-x-2">
+                    <button class="edit-record text-gray-500 hover:text-indigo-600 transition-colors">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="view-revisions text-gray-500 hover:text-indigo-600 transition-colors">
+                        <i class="fas fa-history"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="text-sm text-gray-600">
+                <p class="mb-2 flex items-center gap-2">
+                    <i class="fas fa-calendar-day has-tooltip" data-tooltip="Datums"></i>
+                    <span class="record-date"></span>
+                    <span class="text-xs text-gray-500 record-day"></span>
+                </p>
+                <p class="flex items-center gap-2">
+                    <i class="fas fa-user has-tooltip" data-tooltip="Autors"></i>
+                    <span class="record-author"></span>
+                </p>
+            </div>
+        </div>
+    </template>
+    
+    <template id="revisionItemTemplate">
+        <div class="revision-item border-l-2 border-indigo-400 pl-4 py-2">
+            <div class="flex justify-between">
+                <span class="text-sm font-medium text-gray-700 revision-date"></span>
+                <span class="text-xs text-gray-500 revision-editor"></span>
+            </div>
+            <p class="mt-1 text-sm text-gray-600 revision-reason"></p>
+            <div class="mt-2 text-xs text-gray-500">
+                <details>
+                    <summary class="cursor-pointer hover:text-indigo-600">Skatīt izmaiņas</summary>
+                    <div class="mt-2 p-2 bg-gray-50 rounded revision-changes"></div>
+                </details>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Script Tag -->
+    <script type="module" src="./src/js/app.js"></script>
+</body>
+</html>
