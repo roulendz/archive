@@ -14,23 +14,71 @@ export default class RenderEngine {
         return { formatted: `${year}-${month}-${day}`, dayName };
     };
 
-    showMinCharsMessage(show) {
-        this.minCharsMessage.classList.toggle('hidden', !show);
-        if (show) {
-            this.noResultsMessage.classList.add('hidden');
+    /**
+     * Handles search guidance messages based on input state
+     * @param {number} currentLength - Current search input length
+     * @param {boolean} isManualTrigger - Whether search was manually triggered
+     */
+    updateSearchGuidance(currentLength, isManualTrigger) {
+        const AUTO_SEARCH_MIN = 5;
+        const MANUAL_SEARCH_MIN = 2;
+
+        if (currentLength === 0) {
+            this.showMinCharsMessage(true);
+            this.showNoResults(false);
+            return;
         }
+
+        this.showMinCharsMessage(false);
+
+        // Always calculate remaining characters
+        const remainingAuto = Math.max(AUTO_SEARCH_MIN - currentLength, 0);
+        const remainingManual = Math.max(MANUAL_SEARCH_MIN - currentLength, 0);
+
+        let message = '';
+        if (isManualTrigger) {
+            message = remainingManual > 0 
+                ? `Please enter ${remainingManual} more character${remainingManual !== 1 ? 's' : ''} to search`
+                : 'Showing manual search results';
+        } else {
+            if (remainingAuto > 0) {
+                message = `Please enter ${remainingAuto} more character${remainingAuto !== 1 ? 's' : ''} for auto-search`;
+                if (currentLength >= MANUAL_SEARCH_MIN) {
+                    message += ' or click Search';
+                }
+            } else {
+                message = 'Showing automatic search results';
+            }
+        }
+
+        console.log('RenderEngine.updateSearchGuidance:', message);  // <-- Add this
+        this.showNoResults(true, message);
     }
 
     renderRecords(records) {
+        console.log('RenderEngine.renderRecords:', {
+            input: records,
+        });
+
         this.recordsContainer.innerHTML = '';
-        this.noResultsMessage.classList.toggle('hidden', records.length > 0);
         this.minCharsMessage.classList.add('hidden');
 
-        // Add this conditional to handle empty results after valid search
-        if (records.length === 0) {
-            this.showNoResults(true, 0, true); // Force default message
+        if (records === null) {
+            console.log('RenderEngine - Preserving guidance messages');
+            return;
         }
 
+        // Existing results handling
+        const hasResults = records.length > 0;
+        this.noResultsMessage.classList.toggle('hidden', hasResults);
+
+        if (records.length === 0) {
+            console.log('RenderEngine - Showing default no results message');
+            const defaultMsg = this.noResultsMessage.dataset.defaultMessage;
+            this.showNoResults(true, defaultMsg);
+        }
+
+        // Add missing record rendering logic
         records.forEach(record => {
             const card = document.createElement('div');
             card.className = 'glassmorphism p-6 pastel-' + ((record.id % 5) + 1);
@@ -54,46 +102,22 @@ export default class RenderEngine {
         });
     }
 
-    showLoading(isLoading) {
-        const loader = document.getElementById('loadingIndicator');
-        loader.classList.toggle('hidden', !isLoading);
+    showMinCharsMessage(show) {
+        this.minCharsMessage.classList.toggle('hidden', !show);
     }
 
-    showNoResults(show, currentLength = 0, isManualTrigger = false) {
+    showNoResults(show, customMessage = '') {
         const container = this.noResultsMessage;
         const dynamicMsg = container.querySelector('#dynamicMessage');
-
-        // Modified condition to hide dynamic messages on valid searches
-        if (show && currentLength > 0 && (currentLength < 5 && !isManualTrigger)) {
-            const needsAutoGuidance = !isManualTrigger && currentLength < 5;
-            const needsManualGuidance = isManualTrigger && currentLength < 2;
-            
-            if (needsAutoGuidance || needsManualGuidance) {
-                const charsNeededAuto = Math.max(5 - currentLength, 0);
-                const charsNeededManual = Math.max(2 - currentLength, 0);
-                
-                let message = '';
-                if (!isManualTrigger && currentLength < 5) {
-                    message = `Enter ${charsNeededAuto} more character${charsNeededAuto !== 1 ? 's' : ''} for auto-search`;
-                    if (currentLength >= 2) {
-                        message += ' or click Search';
-                    }
-                } else if (isManualTrigger && currentLength < 2) {
-                    message = `Enter ${charsNeededManual} more character${charsNeededManual !== 1 ? 's' : ''} to search`;
-                }
-                
-                dynamicMsg.textContent = message;
-                container.classList.add('show-dynamic');
-            } else {
-                // Clear dynamic message when thresholds are met
-                container.classList.remove('show-dynamic');
-                dynamicMsg.textContent = '';
-            }
+        
+        if (show) {
+            dynamicMsg.textContent = customMessage;
+            container.classList.add('show-dynamic');
         } else {
             container.classList.remove('show-dynamic');
             dynamicMsg.textContent = '';
         }
-
+        
         container.classList.toggle('hidden', !show);
     }
 }
