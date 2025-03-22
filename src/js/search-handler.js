@@ -24,32 +24,30 @@ export default class SearchHandler {
         const searchTerm = this.searchInput.value.trim();
         const currentLength = searchTerm.length;
         
-        // In the validation checks:
-        if (isManualTrigger && currentLength < 2) {
-            this.app.renderEngine.showNoResults(true, currentLength, true);
-        } else if (!isManualTrigger && currentLength > 0 && currentLength < 5) {
-            this.app.renderEngine.showNoResults(true, currentLength, false);
-        }
+        console.log('SearchHandler.executeSearch:', {  // <-- Add this
+            isManualTrigger,
+            currentLength,
+            searchTerm
+        });
+
+        // Update guidance system before any search execution
+        this.app.renderEngine.updateSearchGuidance(currentLength, isManualTrigger);
+
         const includeAuthor = this.authorCheckbox.checked;
 
-        // Clear previous messages
+        // Clear static message if needed
         this.app.renderEngine.showMinCharsMessage(false);
-        // Remove the line causing the error: this.app.renderEngine.showNoResults(false);
 
+        // Validate search requirements
+        let validSearch = false;
         if (isManualTrigger) {
-            if (searchTerm.length < 2) {
-                this.app.renderEngine.showMinCharsMessage(true);
-                this.app.renderEngine.renderRecords([]);
-                return;
-            }
+            validSearch = currentLength >= 2;
         } else {
-            if (searchTerm.length > 0 && searchTerm.length < 5) {
-                this.app.renderEngine.showMinCharsMessage(true);
-                this.app.renderEngine.renderRecords([]);
-                return;
-            }
+            validSearch = currentLength >= 5;
         }
 
-        this.app.performSearch(searchTerm, includeAuthor);
+        // Execute search or pass null for invalid searches
+        console.log('SearchHandler - validSearch:', validSearch);  // <-- Add this
+        this.app.performSearch(validSearch ? searchTerm : null, includeAuthor);
     }
 }
