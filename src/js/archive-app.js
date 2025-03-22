@@ -2,6 +2,8 @@ import SearchHandler from './search-handler.js';
 import ModalHandler from './modal-handler.js';
 import RenderEngine from './render/render-engine.js';
 import DataService from './data-service.js';
+import { YearRangeComponent } from './components/year-range.js';
+import { getYearRange } from './utils/date-utils.js';
 
 /**
  * Main application controller for archive functionality
@@ -28,6 +30,12 @@ export default class ArchiveApp {
         this.renderEngine.showMinCharsMessage(true);
 
         this.initialize().catch(console.error);
+        
+        /** @type {YearRangeComponent} */
+        this.yearRange = new YearRangeComponent(
+            document.getElementById('yearRange'),
+            document.getElementById('yearSpan')
+        );
     }
 
     /**
@@ -36,9 +44,16 @@ export default class ArchiveApp {
      * @returns {Promise<void>}
      * @throws {Error} If data loading fails
      */
+    // Modify existing initialize method
     async initialize() {
-        this.records = await this.dataService.loadRecords();
-        // Remove the initial search call completely
+        try {
+            this.records = await this.dataService.loadRecords();
+            const { min, max } = getYearRange(this.records);
+            this.yearRange.update(min, max);
+        } catch (error) {
+            console.error('Failed to initialize app:', error);
+            this.yearRange.spanElement.textContent = 'Year data unavailable';
+        }
     }
 
     /**
