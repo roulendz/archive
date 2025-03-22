@@ -3,6 +3,7 @@ export default class SearchHandler {
         this.app = app;
         this.initializeElements();
         this.setupEventListeners();
+        // Remove the automatic search trigger from constructor
     }
 
     initializeElements() {
@@ -20,19 +21,33 @@ export default class SearchHandler {
     }
 
     executeSearch(isManualTrigger) {
-        const searchTerm = this.searchInput.value.trim().toLowerCase();
+        const searchTerm = this.searchInput.value.trim();
+        const currentLength = searchTerm.length;
+        
+        // In the validation checks:
+        if (isManualTrigger && currentLength < 2) {
+            this.app.renderEngine.showNoResults(true, currentLength, true);
+        } else if (!isManualTrigger && currentLength > 0 && currentLength < 5) {
+            this.app.renderEngine.showNoResults(true, currentLength, false);
+        }
         const includeAuthor = this.authorCheckbox.checked;
 
-        // Handle empty search for manual triggers
-        if (isManualTrigger && !searchTerm) {
-            this.app.renderEngine.renderRecords([]);
-            return;
-        }
+        // Clear previous messages
+        this.app.renderEngine.showMinCharsMessage(false);
+        // Remove the line causing the error: this.app.renderEngine.showNoResults(false);
 
-        // Automatic search threshold
-        if (!isManualTrigger && searchTerm.length < 5) {
-            this.app.renderEngine.renderRecords([]);
-            return;
+        if (isManualTrigger) {
+            if (searchTerm.length < 2) {
+                this.app.renderEngine.showMinCharsMessage(true);
+                this.app.renderEngine.renderRecords([]);
+                return;
+            }
+        } else {
+            if (searchTerm.length > 0 && searchTerm.length < 5) {
+                this.app.renderEngine.showMinCharsMessage(true);
+                this.app.renderEngine.renderRecords([]);
+                return;
+            }
         }
 
         this.app.performSearch(searchTerm, includeAuthor);

@@ -7,21 +7,23 @@ export default class ArchiveApp {
     constructor() {
         this.dataService = new DataService();
         this.renderEngine = new RenderEngine();
+        this.records = [];
         this.searchHandler = new SearchHandler(this);
         this.modalHandler = new ModalHandler(this);
         
-        // Remove the immediate initialization
+        // Show initial message immediately
+        this.renderEngine.showMinCharsMessage(true);
+        
         this.initialize().catch(console.error);
     }
 
     async initialize() {
         this.records = await this.dataService.loadRecords();
-        // Removed the renderRecords call here
+        // Remove the initial search call completely
     }
-    
-    // Add new method for searching
+
     performSearch(searchTerm, includeAuthor) {
-        let filteredRecords = this.records;
+        let filteredRecords = [];
         
         if (searchTerm) {
             filteredRecords = this.records.filter(record => {
@@ -35,6 +37,6 @@ export default class ArchiveApp {
             });
         }
 
-        this.renderEngine.renderRecords(filteredRecords.length ? filteredRecords : []);
+        this.renderEngine.renderRecords(filteredRecords);
     }
 }
