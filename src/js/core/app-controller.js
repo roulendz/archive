@@ -67,7 +67,8 @@ export default class AppController {
 
             this.searchGuidance = new SearchGuidanceComponent('#searchGuidance', {
                 eventService: this.eventService,
-                searchService: this.searchService
+                searchService: this.searchService,
+                dataService: this.dataService
             });
             debug.log('Initialized SearchGuidanceComponent');
             
