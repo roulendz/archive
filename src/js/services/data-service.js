@@ -149,4 +149,12 @@ export default class DataService {
         if (!this.revisions || !this.revisions[recordId]) return [];
         return this.revisions[recordId];
     }
+
+    /**
+     * Get total number of loaded records
+     * @returns {number}
+     */
+    getTotalRecords() {
+        return this.records.length;
+    }
 }
