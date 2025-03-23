@@ -13,7 +13,7 @@ export default class SearchGuidanceComponent extends BaseComponent {
      * @param {import('../../services/event-service.js').default} services.eventService
      * @param {import('../../services/search-service.js').default} services.searchService
      */
-    constructor(container, { eventService, searchService }) {
+    constructor(container, { eventService, searchService, dataService }) {  // Add dataService
         super(container);
         
         /** @type {import('../../services/event-service.js').default} */
@@ -21,7 +21,10 @@ export default class SearchGuidanceComponent extends BaseComponent {
         
         /** @type {import('../../services/search-service.js').default} */
         this.searchService = searchService;
-        
+
+        /** @type {import('../../services/data-service.js').default} */
+        this.dataService = dataService;  // Add dataService reference
+
         /** @type {HTMLElement|null} */
         this.messageContainer = document.getElementById('messageContainer');
         
@@ -41,7 +44,7 @@ export default class SearchGuidanceComponent extends BaseComponent {
             minCharsDefault: "Automātiskai meklēšanai, lūdzu, ievadiet vismaz {untilAutoSearchIsEnabled} rakstzīmes!",
             placeholder: "Ievadiet meklēšanas kritērijus, lai atrastu ierakstus",
             searching: "Meklē...",
-            resultsCount: (count) => `Atrasts ${count} ieraksts${count === 1 ? '' : 'i'}`,
+            resultsCount: (count, total) => `Atrast${count === 1 ? 's' : 'i'} ${count} no ${total} ierakst${total === 1 ? 'a' : 'iem'}`, 
             enterToSearch: "Nospiediet Enter vai klikšķiniet uz Meklēt, lai veiktu meklēšanu",
             typing: "Turpiniet rakstīt, lai meklētu..."
         };
@@ -112,7 +115,10 @@ export default class SearchGuidanceComponent extends BaseComponent {
                 this.showMessage(this._messages.noResults);
             } else if (safeResults.length > 0) {
                 this.currentSearchState = 'results';
-                const countMessage = this._messages.resultsCount(safeResults.length);
+                const countMessage = this._messages.resultsCount(
+                    safeResults.length,
+                    this.dataService.getTotalRecords()  // Use direct reference
+                );
                 this.showMessage(countMessage);
             }
         });
