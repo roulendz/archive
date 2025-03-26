@@ -11,7 +11,9 @@ export default class DataService {
      */
     constructor(options = {}) {
         /** @type {string} */
-        this.jsonFilePath = options.jsonFilePath || '/archive_20250322_184450.json';
+        // Determine base URL for JSON file path that works in both local and production environments
+        const baseUrl = window.location.pathname.includes('/calendar/') ? '../' : './'; 
+        this.jsonFilePath = options.jsonFilePath || `${baseUrl}archive_20250322_184450.json`;
         
         /** @type {Array<import('../utils/types.js').ArchiveRecord>} */
         this.records = [];
