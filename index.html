@@ -116,10 +116,15 @@
     <div class="container mx-auto">
         <!-- Header Component -->
         <header id="appHeader" class="mb-8">
-            <h1 id="yearRange" class="text-3xl font-bold text-center mb-2 text-indigo-800">
-                GuP Arhīva ieraksti
-                <span id="yearSpan" class="glassmorphism p-1 text-gray-700 font-medium shadow-sm text-indigo-600 opacity-0 animate-fadeIn"></span>
-            </h1>
+            <div class="flex justify-between items-center mb-4">
+                <h1 id="yearRange" class="text-3xl font-bold text-indigo-800">
+                    GuP Arhīva ieraksti
+                    <span id="yearSpan" class="glassmorphism p-1 text-gray-700 font-medium shadow-sm text-indigo-600 opacity-0 animate-fadeIn"></span>
+                </h1>
+                <a href="./calendar/index.html" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-calendar-alt mr-2"></i>Atvērt Kalendāra skatu
+                </a>
+            </div>
             <p id="appDescription" class="text-center text-gray-600">Meklējiet un pārlūkojiet arhīva ierakstus</p>
         </header>
         

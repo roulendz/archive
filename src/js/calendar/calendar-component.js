@@ -2,6 +2,7 @@
 
 import BaseComponent from '../components/base-component.js';
 import { formatArchiveDate } from '../utils/date-utils.js';
+import { getFirstDayOfMonth } from './calendar-utils.js';
 
 /**
  * Calendar component for displaying archive records in a monthly view
@@ -140,10 +141,9 @@ export default class CalendarComponent extends BaseComponent {
         // Get last day of month
         const lastDay = new Date(year, month + 1, 0);
         
-        // Get day of week for first day (0 = Sunday, 1 = Monday, etc.)
-        // Convert to Monday-based index (0 = Monday, 6 = Sunday)
-        let firstDayIndex = firstDay.getDay() - 1;
-        if (firstDayIndex < 0) firstDayIndex = 6; // Sunday becomes 6
+        // Get day of week for first day (0 = Monday, 6 = Sunday)
+        // Using utility function that handles the conversion from Sunday-based to Monday-based
+        const firstDayIndex = getFirstDayOfMonth(year, month);
         
         // Get total days in month
         const totalDays = lastDay.getDate();
@@ -205,12 +205,25 @@ export default class CalendarComponent extends BaseComponent {
      */
     renderEventsForDay(date, container) {
         // Format date for comparison (YYYY-MM-DD)
-        const dateString = date.toISOString().split('T')[0];
+        // Instead of using toISOString which converts to UTC
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
         
         // Find events for this day
         const events = this.records.filter(record => {
             if (!record.date) return false;
-            return record.date.toString().split('T')[0] === dateString;
+            
+            // Create a date object from the record's date string
+            const recordDate = new Date(record.date);
+            // Format in the same way to avoid timezone issues
+            const recordYear = recordDate.getFullYear();
+            const recordMonth = (recordDate.getMonth() + 1).toString().padStart(2, '0');
+            const recordDay = recordDate.getDate().toString().padStart(2, '0');
+            const recordDateString = `${recordYear}-${recordMonth}-${recordDay}`;
+            
+            return recordDateString === dateString;
         });
         
         // Render events

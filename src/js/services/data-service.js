@@ -11,7 +11,7 @@ export default class DataService {
      */
     constructor(options = {}) {
         /** @type {string} */
-        this.jsonFilePath = options.jsonFilePath || 'archive_20250322_184450.json';
+        this.jsonFilePath = options.jsonFilePath || '/archive_20250322_184450.json';
         
         /** @type {Array<import('../utils/types.js').ArchiveRecord>} */
         this.records = [];

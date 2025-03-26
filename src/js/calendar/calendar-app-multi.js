@@ -1,16 +1,16 @@
-// src/js/calendar/calendar-app.js
+// src/js/calendar/calendar-app-multi.js
 
-import CalendarComponent from './calendar-component.js';
+import MultiMonthCalendar from './multi-month-calendar.js';
 import DataService from '../../../src/js/services/data-service.js';
 import EventService from '../../../src/js/services/event-service.js';
 import { debug } from '../utils/debugservice-utils.js';
 
 /**
- * Initialize calendar application when DOM is fully loaded
+ * Initialize multi-month calendar application when DOM is fully loaded
  * @listens DOMContentLoaded
  */
 document.addEventListener('DOMContentLoaded', () => {
-    debug.styled`${debug.s.large('Calendar Application Starting')}`;
+    debug.styled`${debug.s.large('Multi-Month Calendar Application Starting')}`;
     
     try {
         // Initialize services
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataService = new DataService();
         
         // Initialize calendar component
-        const calendarComponent = new CalendarComponent('#calendar', {
+        const multiMonthCalendar = new MultiMonthCalendar('#calendar', {
             eventService,
             dataService
         });
@@ -39,14 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
             eventService.publish('data:yearRangeLoaded', yearRange);
             
             // Initialize calendar with records
-            calendarComponent.init();
+            multiMonthCalendar.init();
             
             // Hide loading indicator
             if (loadingIndicator) {
                 loadingIndicator.classList.add('hidden');
             }
             
-            debug.styled`${debug.s.success('Calendar application initialized')}`;
+            debug.styled`${debug.s.success('Multi-Month calendar application initialized')}`;
         }).catch(error => {
             debug.styled`${debug.s.error('Failed to load records:')} ${error.message}`;
             console.error('Failed to load records:', error);
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
     } catch (error) {
-        debug.styled`${debug.s.error('Failed to initialize calendar application:')} ${error.message}`;
-        console.error('Failed to initialize calendar application:', error);
+        debug.styled`${debug.s.error('Failed to initialize multi-month calendar application:')} ${error.message}`;
+        console.error('Failed to initialize multi-month calendar application:', error);
     }
 });

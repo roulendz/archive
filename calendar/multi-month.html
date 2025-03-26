@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archive Calendar</title>
+    <title>GuP Arhīvs - Gada Skats</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome for icons -->
@@ -12,6 +12,8 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.0/main.min.css" rel="stylesheet">
     <!-- FullCalendar JS -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.0/index.global.min.js"></script>
+    <!-- FullCalendar Latvian Locale -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.0/locales/lv.global.min.js"></script>
     <style>
         /* Custom styles for glassmorphism */
         .glassmorphism {
@@ -25,31 +27,6 @@
         body {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
-        }
-        
-        .calendar-day {
-            min-height: 100px;
-            transition: all 0.3s ease;
-        }
-        
-        .calendar-day:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-        
-        .calendar-event {
-            border-left: 3px solid #4f46e5;
-            background: rgba(79, 70, 229, 0.1);
-            transition: all 0.2s ease;
-        }
-        
-        .calendar-event:hover {
-            background: rgba(79, 70, 229, 0.2);
-            transform: translateY(-2px);
-        }
-        
-        .today {
-            background: rgba(79, 70, 229, 0.1);
-            font-weight: bold;
         }
         
         /* Animations */
@@ -69,19 +46,35 @@
         }
         
         /* FullCalendar customizations */
-        .fc-datepicker-button {
+        .fc .fc-button-primary {
             background-color: #4f46e5 !important;
             border-color: #4f46e5 !important;
         }
         
-        .fc-datepicker-button:hover {
+        .fc .fc-button-primary:hover {
             background-color: #4338ca !important;
             border-color: #4338ca !important;
         }
         
-        .fc-toolbar-chunk {
-            display: flex;
-            align-items: center;
+        .fc .fc-toolbar-title {
+            font-size: 1.5rem;
+            color: #4f46e5;
+        }
+        
+        .fc-event {
+            border-left: 3px solid #4f46e5 !important;
+            background: rgba(79, 70, 229, 0.8) !important;
+            color: #1e293b !important;
+            transition: all 0.2s ease;
+        }
+        
+        .fc-event:hover {
+            background: rgba(79, 70, 229, 0.2) !important;
+            transform: translateY(-2px);
+        }
+        
+        .fc-day-today {
+            background: rgba(79, 70, 229, 0.05) !important;
         }
     </style>
 </head>
@@ -89,38 +82,14 @@
     <header class="mb-8">
         <div class="container mx-auto">
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold text-indigo-800">GuP Arhīvs - Kalendārs</h1>
+                <h1 class="text-3xl font-bold text-indigo-800">GuP Arhīvs - Pilns Gada Skats</h1>
                 <div class="flex items-center">
-                    <a href="./multi-month.html" class="text-indigo-600 hover:text-indigo-800 transition-colors mr-4">
-                        <i class="fas fa-calendar-alt mr-2"></i>Atvērt Pilnu Gada Skatu
+                    <a href="./index.html" class="text-indigo-600 hover:text-indigo-800 transition-colors mr-4">
+                        <i class="fas fa-calendar mr-2"></i>Atpakaļ uz mēneša skatu
                     </a>
                     <a href="../index.html" class="text-indigo-600 hover:text-indigo-800 transition-colors">
                         <i class="fas fa-arrow-left mr-2"></i>Atpakaļ uz arhīva meklētāju
                     </a>
-                </div>
-            </div>
-            <div class="glassmorphism p-4 mb-4">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <button id="prevMonth" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
-                            <i class="fas fa-chevron-left mr-1"></i>Atpakaļ
-                        </button>
-                        <button id="nextMonth" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors ml-2">
-                            Uz priekšu<i class="fas fa-chevron-right ml-1"></i>
-                        </button>
-                        <button id="todayBtn" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors ml-2">
-                            Šodiena
-                        </button>
-                    </div>
-                    <h2 id="currentMonthYear" class="text-2xl font-semibold text-indigo-800"></h2>
-                    <div id="yearRange" class="text-gray-600">
-                        <span id="yearSpan">2020 - 2025</span>
-                    </div>
-                </div>
-                
-                <!-- FullCalendar date picker -->
-                <div class="flex items-center justify-center mt-4">
-                    <div id="datePicker" class="w-64"></div>
                 </div>
             </div>
         </div>
@@ -128,18 +97,7 @@
 
     <main class="container mx-auto glassmorphism p-6 animate-fadeIn">
         <!-- Calendar will be rendered here -->
-        <div id="calendar" class="grid grid-cols-7 gap-1">
-            <!-- Calendar header (days of week) -->
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Mon</div>
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Tue</div>
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Wed</div>
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Thu</div>
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Fri</div>
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Sat</div>
-            <div class="text-center font-semibold p-2 bg-indigo-100 rounded">Sun</div>
-            
-            <!-- Calendar days will be inserted here by JavaScript -->
-        </div>
+        <div id="calendar"></div>
     </main>
 
     <!-- Event Details Modal -->
@@ -166,6 +124,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="../src/js/calendar/calendar-app.js"></script>
+    <script type="module" src="../src/js/calendar/calendar-app-multi.js"></script>
 </body>
 </html>
