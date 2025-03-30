@@ -103,12 +103,12 @@ export default class MultiMonthCalendar extends BaseComponent {
                 multiMonthYear: {
                     type: 'multiMonth',
                     duration: { months: 12 },
-                    buttonText: 'Pilns gads'
+                    buttonText: '12 mēneši'
                 },
                 multiMonthFourMonth: {
                     type: 'multiMonth',
                     duration: { months: 6 },
-                    buttonText: '6 Mēneši'
+                    buttonText: '6 mēneši'
                 }
             },
             events: events,
