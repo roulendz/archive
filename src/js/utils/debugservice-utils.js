@@ -182,13 +182,6 @@ class ConsoleDebugService {
   }
   
   /**
-   * Add a new style to the registry
-   * @public
-   * @param {string} name - Name of the style
-   * @param {StyleOptions|StyleDefinition|string} style - Style definition
-   * @returns {ConsoleDebugService} This instance for chaining
-   */
-  /**
    * Stable identifier for a dynamic style definition.
    * @private
    * @param {StyleOptions|StyleDefinition|string} style
@@ -207,6 +200,13 @@ class ConsoleDebugService {
     return (hash >>> 0).toString(36);
   }
 
+  /**
+   * Add a new style to the registry
+   * @public
+   * @param {string} name - Name of the style
+   * @param {StyleOptions|StyleDefinition|string} style - Style definition
+   * @returns {ConsoleDebugService} This instance for chaining
+   */
   addStyle(name, style) {
     // Convert to standard style definition
     let styleDefinition;

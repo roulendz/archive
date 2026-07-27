@@ -131,7 +131,9 @@ export default class MultiMonthCalendar extends BaseComponent {
      * @returns {Array<Object>} Formatted events
      */
     formatEventsForFullCalendar() {
-        return this.records.map(record => {
+        // Undated recordings have no position on a calendar; handing them to
+        // FullCalendar with start: null makes it reject and warn on each one.
+        return this.records.filter(record => record.date).map(record => {
             return {
                 id: record.id,
                 title: record.title || 'Untitled Event',

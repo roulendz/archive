@@ -430,8 +430,22 @@ $parsed = foreach ($f in $found) {
 
     $isDerivative = ($f.Rel -match $DerivativeDir) -or ($f.BaseName -match $DerivativeFile)
 
+    # A name that is nothing but a date and an encoder suffix - "13.01.2008_0" -
+    # cleans down to "0". Fall back to the folder it came from, which is what a
+    # human would call it.
+    # Some files are named only by when they were recorded - "2007-5-20
+    # 11-14-33.mp3" - so cleaning the date out leaves nothing. Say plainly that
+    # it is an untitled recording from that date rather than inventing a title
+    # or labelling it with its year folder.
+    $title = Get-CleanTitle $f.BaseName
+    if ($title -notmatch '[A-Za-zĀ-ž]') {
+        $title = if ($date) { "Ieraksts $($date.ToString('yyyy-MM-dd'))" }
+                 elseif ($series) { $series }
+                 else { $f.BaseName }
+    }
+
     [pscustomobject]@{
-        Title    = Get-CleanTitle $f.BaseName
+        Title    = $title
         Date     = $date
         Author   = Get-Author $f.BaseName
         Volume   = $Volume
@@ -481,7 +495,14 @@ $nextId = 0
 $linked = 0
 $added = 0
 
-if ($ExistingJson -and (Test-Path -LiteralPath $ExistingJson)) {
+# A missing -ExistingJson used to fall through to the build-from-scratch branch
+# and quietly emit a catalog containing only what this scan found, silently
+# discarding every curated record. Refuse instead.
+if ($ExistingJson -and -not (Test-Path -LiteralPath $ExistingJson)) {
+    throw "ExistingJson not found: '$ExistingJson'. Pass a valid catalog, or omit -ExistingJson to build from scratch."
+}
+
+if ($ExistingJson) {
     Write-Host 'Merging with existing catalog...' -ForegroundColor Cyan
     $existing = Get-Content -LiteralPath $ExistingJson -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($e in $existing) { $records.Add($e) }
@@ -568,19 +589,60 @@ if ($ExistingJson -and (Test-Path -LiteralPath $ExistingJson)) {
 
     # Everything the catalog already knows about, by title and by filename, so a
     # second run does not append the same recording again.
-    $known = [Collections.Generic.HashSet[string]]::new()
+    # The file path is the real primary key. Title alone is not enough: when a
+    # previous run linked a file to a curated record, that record kept its own
+    # spelling ("Atgriežoties pie Tā Kunga") while the scanner derives a
+    # different one from the filename, so a title-only check re-added the file
+    # on every subsequent run.
+    $knownPaths = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    # Title alone cannot decide this: "Youth meeting" is a distinct service each
+    # time it recurs. A dated recording is only already-known if some record
+    # shares both its title and its date.
+    $knownTitleDate = [Collections.Generic.HashSet[string]]::new()
+    $knownTitle = [Collections.Generic.HashSet[string]]::new()
+
+    $addKnown = {
+        param($key, $dateKey)
+        if (-not $key) { return }
+        [void]$knownTitle.Add($key)
+        [void]$knownTitleDate.Add("$key|$dateKey")
+    }
+
     foreach ($rec in $records) {
+        $dateKey = ''
+        $rawDate = Get-Prop $rec 'date'
+        if ($rawDate) { try { $dateKey = ([datetime]$rawDate).ToString('yyyy-MM-dd') } catch { } }
+
         $t = [string](Get-Prop $rec 'title')
-        if ($t) { $k = Get-NormalizedKey $t; if ($k) { [void]$known.Add($k) } }
+        if ($t) { & $addKnown (Get-NormalizedKey $t) $dateKey }
+
         $p = [string](Get-Prop $rec 'path')
         if ($p) {
-            [void]$known.Add((Get-NormalizedKey (($p -split '\\')[-1] -replace '\.[a-z0-9]+$', '')))
+            [void]$knownPaths.Add($p)
+            # Also index the filename cleaned the same way the scanner cleans
+            # it, so a file already attached to a curated record - which kept
+            # its own spelling of the title - is not added again next run.
+            $base = ($p -split '\\')[-1] -replace '\.[A-Za-z0-9]+$', ''
+            & $addKnown (Get-NormalizedKey (Get-CleanTitle $base)) $dateKey
         }
     }
 
     foreach ($d in $deduped) {
         if ($claimed.Contains($d.Path)) { continue }
-        if ($known.Contains((Get-NormalizedKey $d.Title))) { continue }
+        if ($knownPaths.Contains($d.Path)) { continue }
+
+        $key = Get-NormalizedKey $d.Title
+        if ($key) {
+            if ($d.Date) {
+                # Same title on a different day is a different service.
+                if ($knownTitleDate.Contains("$key|$($d.Date.ToString('yyyy-MM-dd'))")) { continue }
+            } elseif ($knownTitle.Contains($key)) {
+                # Undated: no way to tell it apart, so assume it is the one
+                # already catalogued rather than risk a duplicate.
+                continue
+            }
+        }
         $records.Add((New-Record -Item $d -Id $nextId))
         $nextId++
         $added++

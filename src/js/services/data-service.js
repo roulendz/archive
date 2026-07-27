@@ -208,7 +208,9 @@ export default class DataService {
         const { recordId, updates, editor } = updateData;
         
         // Find record
-        const index = this.records.findIndex(record => record.id === recordId);
+        // Same string/number mismatch that getRecordById guards against.
+        const wanted = String(recordId);
+        const index = this.records.findIndex(record => String(record.id) === wanted);
         if (index === -1) return null;
         
         // Create a copy of the original record for revision history
@@ -223,6 +225,11 @@ export default class DataService {
         
         // Save to records array
         this.records[index] = updatedRecord;
+
+        // The search index and date buckets hold the pre-edit copy, so without
+        // this an edited title stays unsearchable and the calendar keeps
+        // showing the old text.
+        this._buildIndexes();
         
         // Create revision history entry
         if (!this.revisions) this.revisions = {};

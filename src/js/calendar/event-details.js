@@ -17,12 +17,16 @@ import { escapeHtml } from '../utils/dom-utils.js';
  * @returns {string} HTML for the modal body
  */
 export function renderEventDetails(event) {
+    // Several hundred undated cassette teachings carry date: null, and
+    // new Date(null) is the Unix epoch rather than an invalid date - so an
+    // unguarded read renders them as 1 January 1970.
     const dateObj = new Date(event.date);
-    const formattedDate = formatArchiveDate(event.date);
+    const hasDate = Boolean(event.date) && !Number.isNaN(dateObj.getTime());
+    const formattedDate = hasDate ? formatArchiveDate(event.date) : null;
 
     // Pre-2010 records store a date with no real recording time. Rendering
     // "00:00" would invent precision the archive does not have.
-    const hasTime = !Number.isNaN(dateObj.getTime()) &&
+    const hasTime = hasDate &&
         (dateObj.getHours() !== 0 || dateObj.getMinutes() !== 0);
     const timeString = hasTime
         ? `${dateObj.getHours().toString().padStart(2, '0')}:` +

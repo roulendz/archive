@@ -104,7 +104,13 @@ export default class CalendarComponent extends BaseComponent {
      * @param {number} direction - Direction to navigate (-1 for previous, 1 for next)
      */
     navigateMonth(direction) {
-        this.currentDate.setMonth(this.currentDate.getMonth() + direction);
+        // Anchor to the 1st. setMonth on a date whose day-of-month exceeds the
+        // target month's length overflows, so stepping back from the 31st
+        // skips a month entirely.
+        this.currentDate = new Date(
+            this.currentDate.getFullYear(),
+            this.currentDate.getMonth() + direction,
+            1);
         this.render();
     }
     
@@ -245,12 +251,13 @@ export default class CalendarComponent extends BaseComponent {
             container.appendChild(eventEl);
         }
 
-        // If there are more than 3 events, show a "more" indicator
-        if (events.length > 3) {
+        // Show a "more" indicator for whatever the cell could not fit.
+        const shown = CalendarComponent.MAX_VISIBLE_EVENTS;
+        if (events.length > shown) {
             const moreIndicator = document.createElement('div');
             moreIndicator.className = 'text-xs text-center text-indigo-600 font-semibold cursor-pointer';
-            moreIndicator.textContent = `+${events.length - 3} more`;
-            
+            moreIndicator.textContent = `+${events.length - shown} vēl`;
+
             // Add click event to show all events for this day
             moreIndicator.addEventListener('click', () => this.showDayEvents(date, events));
             
