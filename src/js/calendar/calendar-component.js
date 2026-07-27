@@ -1,14 +1,18 @@
 // src/js/calendar/calendar-component.js
 
 import BaseComponent from '../components/base-component.js';
-import { formatArchiveDate } from '../utils/date-utils.js';
-import { getFirstDayOfMonth } from './calendar-utils.js';
+import { getFirstDayOfMonth, formatDuration } from './calendar-utils.js';
+import { escapeHtml } from '../utils/dom-utils.js';
+import { renderEventDetails } from './event-details.js';
 
 /**
  * Calendar component for displaying archive records in a monthly view
  * @extends BaseComponent
  */
 export default class CalendarComponent extends BaseComponent {
+    /** Events shown inline in a day cell before collapsing to "+N more". */
+    static MAX_VISIBLE_EVENTS = 3;
+
     /**
      * @param {HTMLElement|string} container 
      * @param {Object} options - Component options
@@ -71,6 +75,10 @@ export default class CalendarComponent extends BaseComponent {
         // Load records
         this.dataService.loadRecords().then(records => {
             this.records = records;
+            // Open on the newest month that actually has recordings. Seeding
+            // from today lands on an empty grid, which reads as a broken page.
+            const latest = this.dataService.getLatestDate();
+            if (latest) this.currentDate = latest;
             this.render();
         });
         
@@ -104,7 +112,9 @@ export default class CalendarComponent extends BaseComponent {
      * Go to current month
      */
     goToToday() {
-        this.currentDate = new Date();
+        // "Today" on an archive that ends in the past is an empty month, so
+        // fall back to the most recent month holding recordings.
+        this.currentDate = this.dataService.getLatestDate() || new Date();
         this.render();
     }
     
@@ -204,41 +214,37 @@ export default class CalendarComponent extends BaseComponent {
      * @param {HTMLElement} container - Container to append events to
      */
     renderEventsForDay(date, container) {
-        // Format date for comparison (YYYY-MM-DD)
-        // Instead of using toISOString which converts to UTC
+        // Local date parts, not toISOString, which would shift across the UTC
+        // boundary and file evening recordings under the wrong day.
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
-        
-        // Find events for this day
-        const events = this.records.filter(record => {
-            if (!record.date) return false;
-            
-            // Create a date object from the record's date string
-            const recordDate = new Date(record.date);
-            // Format in the same way to avoid timezone issues
-            const recordYear = recordDate.getFullYear();
-            const recordMonth = (recordDate.getMonth() + 1).toString().padStart(2, '0');
-            const recordDay = recordDate.getDate().toString().padStart(2, '0');
-            const recordDateString = `${recordYear}-${recordMonth}-${recordDay}`;
-            
-            return recordDateString === dateString;
-        });
-        
-        // Render events
-        events.forEach(event => {
+
+        // O(1) bucket lookup. This runs once per day cell, so scanning all
+        // 8,000+ records here meant a quarter of a million Date allocations on
+        // every month navigation.
+        const events = this.dataService.getRecordsForDate(dateString);
+
+        // Render at most three; the rest are reachable through the indicator
+        // below, which previously claimed to hide events that were all present.
+        for (const event of events.slice(0, CalendarComponent.MAX_VISIBLE_EVENTS)) {
             const eventEl = document.createElement('div');
             eventEl.className = 'calendar-event p-1 text-xs rounded cursor-pointer truncate';
             eventEl.textContent = event.title || 'Untitled Event';
             eventEl.dataset.eventId = event.id;
-            
-            // Add click event to show details
-            eventEl.addEventListener('click', () => this.showEventDetails(event));
-            
+            eventEl.tabIndex = 0;
+            eventEl.setAttribute('role', 'button');
+
+            const open = () => this.showEventDetails(event);
+            eventEl.addEventListener('click', open);
+            eventEl.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+            });
+
             container.appendChild(eventEl);
-        });
-        
+        }
+
         // If there are more than 3 events, show a "more" indicator
         if (events.length > 3) {
             const moreIndicator = document.createElement('div');
@@ -259,50 +265,8 @@ export default class CalendarComponent extends BaseComponent {
     showEventDetails(event) {
         // Set modal title
         this.modalTitle.textContent = event.title || 'Untitled Event';
-        
-        // Format date
-        const dateObj = new Date(event.date);
-        const formattedDate = formatArchiveDate(event.date);
-        
-        // Format time
-        const hours = dateObj.getHours().toString().padStart(2, '0');
-        const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-        const timeString = `${hours}:${minutes}`;
-        
-        // Format duration (seconds to minutes:seconds)
-        const durationMinutes = Math.floor(event.duration / 60);
-        const durationSeconds = event.duration % 60;
-        const durationString = `${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`;
-        
-        // Build modal content
-        this.modalContent.innerHTML = `
-            <div class="grid grid-cols-3 gap-2 text-sm">
-                <div class="font-semibold">Date:</div>
-                <div class="col-span-2">${formattedDate.formatted} (${formattedDate.dayName})</div>
-                
-                <div class="font-semibold">Time:</div>
-                <div class="col-span-2">${timeString}</div>
-                
-                <div class="font-semibold">Duration:</div>
-                <div class="col-span-2">${durationString}</div>
-                
-                <div class="font-semibold">Author:</div>
-                <div class="col-span-2">${event.author || 'Unknown'}</div>
-                
-                <div class="font-semibold">File Type:</div>
-                <div class="col-span-2">${event.fileType || 'Unknown'}</div>
-                
-                <div class="font-semibold">Group:</div>
-                <div class="col-span-2">${event.group || 'Unknown'}</div>
-            </div>
-            
-            <div class="mt-4 pt-4 border-t border-gray-200">
-                <div class="font-semibold mb-2">File Path:</div>
-                <div class="text-sm bg-gray-100 p-2 rounded overflow-x-auto">
-                    ${event.path || 'Unknown'}
-                </div>
-            </div>
-        `;
+
+        this.modalContent.innerHTML = renderEventDetails(event);
         
         // Show modal
         this.eventModal.classList.remove('hidden');
@@ -329,33 +293,34 @@ export default class CalendarComponent extends BaseComponent {
         let eventsList = '<div class="space-y-3">';
         
         events.forEach(event => {
-            // Format time
             const eventDate = new Date(event.date);
-            const hours = eventDate.getHours().toString().padStart(2, '0');
-            const minutes = eventDate.getMinutes().toString().padStart(2, '0');
-            const timeString = `${hours}:${minutes}`;
-            
-            // Format duration
-            const durationMinutes = Math.floor(event.duration / 60);
-            const durationSeconds = event.duration % 60;
-            const durationString = `${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`;
-            
+            const hasTime = !Number.isNaN(eventDate.getTime()) &&
+                (eventDate.getHours() !== 0 || eventDate.getMinutes() !== 0);
+            const timeString = hasTime
+                ? `${eventDate.getHours().toString().padStart(2, '0')}:` +
+                  `${eventDate.getMinutes().toString().padStart(2, '0')}`
+                : '—';
+
+            const durationString = Number.isFinite(event.duration) && event.duration > 0
+                ? formatDuration(event.duration)
+                : '—';
+
             eventsList += `
                 <div class="p-3 bg-indigo-50 rounded-lg">
-                    <div class="font-semibold text-indigo-800">${event.title || 'Untitled Event'}</div>
+                    <div class="font-semibold text-indigo-800">${escapeHtml(event.title || 'Untitled Event')}</div>
                     <div class="grid grid-cols-3 gap-1 text-sm mt-2">
-                        <div class="font-semibold">Time:</div>
+                        <div class="font-semibold">Laiks:</div>
                         <div class="col-span-2">${timeString}</div>
-                        
-                        <div class="font-semibold">Duration:</div>
+
+                        <div class="font-semibold">Ilgums:</div>
                         <div class="col-span-2">${durationString}</div>
-                        
-                        <div class="font-semibold">Author:</div>
-                        <div class="col-span-2">${event.author || 'Unknown'}</div>
+
+                        <div class="font-semibold">Autors:</div>
+                        <div class="col-span-2">${escapeHtml(event.author || 'Nezināms')}</div>
                     </div>
-                    <button class="mt-2 text-xs text-indigo-600 hover:text-indigo-800" 
-                            data-event-id="${event.id}">
-                        View Details
+                    <button class="mt-2 text-xs text-indigo-600 hover:text-indigo-800"
+                            data-event-id="${escapeHtml(event.id)}">
+                        Skatīt detaļas
                     </button>
                 </div>
             `;

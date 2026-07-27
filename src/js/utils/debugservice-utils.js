@@ -161,14 +161,21 @@ class ConsoleDebugService {
       };
     });
     
-    // Add a dynamic style creator method
+    // Add a dynamic style creator method.
+    //
+    // The id is derived from the style itself, not from a counter. Callers sit
+    // inside tagged-template literals whose substitutions are evaluated eagerly
+    // - before the tag function can check whether debug mode is on - so this
+    // runs on every keystroke in production. Keying by content means the same
+    // style resolves to the same entry instead of growing the registry without
+    // bound.
     this.s.custom = (cssOptions, value) => {
-      // Generate a unique style ID
-      const styleId = `dynamic_${Object.keys(this.styles).length}`;
-      
-      // Add this style to the registry
-      this.addStyle(styleId, cssOptions);
-      
+      const styleId = `dynamic_${this._styleKey(cssOptions)}`;
+
+      if (!this.styles[styleId]) {
+        this.addStyle(styleId, cssOptions);
+      }
+
       // Return the styled value
       return { style: styleId, value: value };
     };
@@ -181,6 +188,25 @@ class ConsoleDebugService {
    * @param {StyleOptions|StyleDefinition|string} style - Style definition
    * @returns {ConsoleDebugService} This instance for chaining
    */
+  /**
+   * Stable identifier for a dynamic style definition.
+   * @private
+   * @param {StyleOptions|StyleDefinition|string} style
+   * @returns {string}
+   */
+  _styleKey(style) {
+    const source = typeof style === 'string'
+      ? style
+      : Object.keys(style).sort().map(k => `${k}:${style[k]}`).join(';');
+
+    // djb2 - short, stable, and collision-safe enough for a debug registry.
+    let hash = 5381;
+    for (let i = 0; i < source.length; i++) {
+      hash = ((hash << 5) + hash + source.charCodeAt(i)) | 0;
+    }
+    return (hash >>> 0).toString(36);
+  }
+
   addStyle(name, style) {
     // Convert to standard style definition
     let styleDefinition;

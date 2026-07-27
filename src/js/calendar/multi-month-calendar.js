@@ -1,8 +1,7 @@
 // src/js/calendar/multi-month-calendar.js
 
 import BaseComponent from '../components/base-component.js';
-import { formatArchiveDate } from '../utils/date-utils.js';
-import { groupEventsByDate } from './calendar-utils.js';
+import { renderEventDetails } from './event-details.js';
 
 /**
  * MultiMonth calendar component for displaying archive records in a yearly or multi-month view
@@ -92,7 +91,10 @@ export default class MultiMonthCalendar extends BaseComponent {
         // Initialize FullCalendar
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'multiMonthYear',
-            initialDate: new Date(new Date().getFullYear(), 0, 1), // Always start with January 1st of current year
+            // Open on the newest year that has recordings. Seeding from the
+            // current year shows twelve empty months, since the archive ends
+            // in the past.
+            initialDate: new Date((this.dataService.getLatestDate() || new Date()).getFullYear(), 0, 1),
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -156,51 +158,9 @@ export default class MultiMonthCalendar extends BaseComponent {
     showEventDetails(event) {
         // Set modal title
         this.modalTitle.textContent = event.title || 'Untitled Event';
-        
-        // Format date
-        const dateObj = new Date(event.date);
-        const formattedDate = formatArchiveDate(event.date);
-        
-        // Format time
-        const hours = dateObj.getHours().toString().padStart(2, '0');
-        const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-        const timeString = `${hours}:${minutes}`;
-        
-        // Format duration (seconds to minutes:seconds)
-        const durationMinutes = Math.floor(event.duration / 60);
-        const durationSeconds = event.duration % 60;
-        const durationString = `${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`;
-        
-        // Build modal content
-        this.modalContent.innerHTML = `
-            <div class="grid grid-cols-3 gap-2 text-sm">
-                <div class="font-semibold">Date:</div>
-                <div class="col-span-2">${formattedDate.formatted} (${formattedDate.dayName})</div>
-                
-                <div class="font-semibold">Time:</div>
-                <div class="col-span-2">${timeString}</div>
-                
-                <div class="font-semibold">Duration:</div>
-                <div class="col-span-2">${durationString}</div>
-                
-                <div class="font-semibold">Author:</div>
-                <div class="col-span-2">${event.author || 'Unknown'}</div>
-                
-                <div class="font-semibold">File Type:</div>
-                <div class="col-span-2">${event.fileType || 'Unknown'}</div>
-                
-                <div class="font-semibold">Group:</div>
-                <div class="col-span-2">${event.group || 'Unknown'}</div>
-            </div>
-            
-            <div class="mt-4 pt-4 border-t border-gray-200">
-                <div class="font-semibold mb-2">File Path:</div>
-                <div class="text-sm bg-gray-100 p-2 rounded overflow-x-auto">
-                    ${event.path || 'Unknown'}
-                </div>
-            </div>
-        `;
-        
+
+        this.modalContent.innerHTML = renderEventDetails(event);
+
         // Show modal
         this.eventModal.classList.remove('hidden');
     }

@@ -1,3 +1,19 @@
+/**
+ * Escape a value for interpolation into an HTML template string.
+ * Record titles and authors are transcribed filenames, not trusted markup.
+ * @param {*} value
+ * @returns {string}
+ */
+export function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export function initializeTooltips() {
     const tooltip = document.createElement('div');
     tooltip.id = 'global-tooltip';

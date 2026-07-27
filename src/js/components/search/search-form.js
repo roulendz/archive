@@ -7,8 +7,11 @@ import BaseComponent from '../base-component.js';
  * @extends BaseComponent
  */
 export default class SearchFormComponent extends BaseComponent {
+    /** Idle time before an auto-search fires, in milliseconds. @type {number} */
+    static INPUT_DEBOUNCE_MS = 250;
+
     /**
-     * @param {HTMLElement|string} container 
+     * @param {HTMLElement|string} container
      * @param {Object} services - Application services
      * @param {import('../../services/event-service.js').default} services.eventService
      * @param {import('../../services/search-service.js').default} services.searchService
@@ -77,11 +80,21 @@ export default class SearchFormComponent extends BaseComponent {
             }
         });
         
-        // Input change event (for auto-search)
+        // Input change event (for auto-search). Debounced: a full scan of the
+        // archive plus a re-render on every keypress makes typing stutter.
         this.searchInput.addEventListener('input', () => {
-            this.executeSearch(false);
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = setTimeout(
+                () => this.executeSearch(false),
+                SearchFormComponent.INPUT_DEBOUNCE_MS);
         });
-        
+
+        // Disabled until the archive has loaded. Searching an empty array
+        // reports "nothing found", which is indistinguishable from a real
+        // empty result and is what a visitor sees during the initial fetch.
+        this.searchInput.disabled = true;
+        this.searchButton.disabled = true;
+
         // Subscribe to app events - add safety check
         if (this.eventService && typeof this.eventService.subscribe === 'function') {
             this.eventService.subscribe('app:ready', () => {
